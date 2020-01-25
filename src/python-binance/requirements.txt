@@ -4,6 +4,6 @@ chardet==3.0.4
 cryptography==2.3
 dateparser==0.7.0
 pyOpenSSL==17.5.0
-requests==2.19.1
+requests==2.20.0
 service-identity==17.0.0
 Twisted==18.7.0
