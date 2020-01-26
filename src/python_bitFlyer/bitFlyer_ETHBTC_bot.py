@@ -53,10 +53,10 @@ class ChannelBreakOut:
         #注文執行コスト．遅延などでこの値幅を最初から取られていると仮定する
         self._cost = 0.1
         self.order = Order()
-        self.api = pybitflyer.API("your API Key", "Your API Secret Key")
+        self.api = pybitflyer.API("Your API Key", "Your API Secret Key")
 
         #ラインに稼働状況を通知
-        self.line_notify_token = 'Your Line Notyfy Token'
+        self.line_notify_token = 'Your Line Token'
         self.line_notify_api = 'https://notify-api.line.me/api/notify'
         ## 内部計算用損益
 
@@ -154,7 +154,7 @@ class ChannelBreakOut:
         証拠金からロットを計算する関数．
         """
         lot = math.floor(margin*10**(-4))*10**(-2)*self.cost
-        return round(lot,2)
+        return round(lot,3)
 
     def calculateLines(self, df_candleStick, term):
         """
@@ -275,11 +275,13 @@ class ChannelBreakOut:
         """
         Listのローソク足をpandasデータフレームへ．
         """
+        #print("In candleStick=",candleStick)
         date = [price[0] for price in candleStick]
-        priceOpen = [int(price[1]) for price in candleStick]
-        priceHigh = [int(price[2]) for price in candleStick]
-        priceLow = [int(price[3]) for price in candleStick]
-        priceClose = [int(price[4]) for price in candleStick]
+        #c = [int(price[1]) for price in candleStick]
+        priceOpen = [float(price[1]) for price in candleStick]
+        priceHigh = [float(price[2]) for price in candleStick]
+        priceLow = [float(price[3]) for price in candleStick]
+        priceClose = [float(price[4]) for price in candleStick]
         date_datetime = map(datetime.datetime.fromtimestamp, date)
         dti = pd.DatetimeIndex(date_datetime)
         df_candleStick = pd.DataFrame({"open" : priceOpen, "high" : priceHigh, "low": priceLow, "close" : priceClose}, index=dti)
@@ -345,24 +347,11 @@ class ChannelBreakOut:
 ######################
 ##### MAIN LOGIC #####
 ######################
-    def loop(self,entryTerm, closeTerm, rangeTh, rangeTerm,originalWaitTerm, waitTh,candleTerm):
-        print("entryTerm=",entryTerm)
-        print("closeTerm=",closeTerm)
-        print("rangeTh=",rangeTh)
-        print("rangeTerm=",rangeTerm)
-        print("originalWaitTerm=",originalWaitTerm)
-        print("waitTh=",waitTh)
-        print("candleTerm=",candleTerm)
+    def loop(self,entryTerm, closeTerm, rangeTh, rangeTerm,originalWaitTerm, waitTh,candleTerm=None):
         recheck_flg = 0
         """
         注文の実行ループを回す関数
         """
-        #try:
-        #    self.executionsProcess()
-        #except:
-        #    pass
-        ##pubnubが回り始めるまで待つ．
-        #time.sleep(30)
         profitPos = 0.0
         lastSide = 0
         okOrder = False
@@ -377,7 +366,7 @@ class ChannelBreakOut:
         originalLot = self.lot
         waitTerm = 0
         try:
-           candleStick = self.getCandlestick(60, "300")
+           candleStick = self.getCandlestick(60, "60")
         except:
             print("Unknown error happend when you requested candleStick")
         if candleTerm == None:
@@ -386,17 +375,6 @@ class ChannelBreakOut:
             df_candleStick = self.processCandleStick(candleStick, candleTerm)
         entryLowLine, entryHighLine = self.calculateLines(df_candleStick, entryTerm)
         closeLowLine, closeHighLine = self.calculateLines(df_candleStick, closeTerm)
-#
-        #print("entryLowLine  =" + str(entryLowLine))
-        #print("entryHighLine =" + str(entryHighLine))
-        #print("closeLowLine  =" + str(closeLowLine))
-        #print("closeHighLine =" + str(closeHighLine))
-#
-        #直近約定件数30件の高値と安値
-        #high = max([self.executions[-1-i]["price"] for i in range(60)])
-        #low = min([self.executions[-1-i]["price"] for i in range(60)])
-        #high = max([candleStick[-1-i][2] for i in range(30)])
-        #low = max([candleStick[-1-i][3] for i in range(30)])
 
         while True:
             #if datetime.datetime.now().second < 2 :
@@ -405,13 +383,15 @@ class ChannelBreakOut:
                 print("Renewing candleSticks")
                 recheck_flg = 1
                 try:
-                    candleStick = self.getCandlestick(50, "60")
+                    candleStick = self.getCandlestick(60, "60")
                 except:
                     print("Unknown error happend when you requested candleStick")
                 if candleTerm == None:
                     df_candleStick = self.fromListToDF(candleStick)
+                    #print("df_candleStick_01=",df_candleStick)
                 else:
                     df_candleStick = self.processCandleStick(candleStick, candleTerm)
+                    print("df_candleStick_02=",df_candleStick)
                 entryLowLine, entryHighLine = self.calculateLines(df_candleStick, entryTerm)
                 closeLowLine, closeHighLine = self.calculateLines(df_candleStick, closeTerm)
 #
@@ -419,10 +399,6 @@ class ChannelBreakOut:
                 #logger.info("entryHighLine=",str(entryHighLine))
                 #logger.info("entryHighLine=",str(closeLowLine))
                 #logger.info("closeHighLine=",str(closeHighLine))
-                #print("entryLowLine  =" + str(entryLowLine))
-                #print("entryHighLine =" + str(entryHighLine))
-                #print("closeLowLine  =" + str(closeLowLine))
-                #print("closeHighLine =" + str(closeHighLine))
 #
             else:
                 recheck_flg = 0
@@ -654,7 +630,7 @@ if __name__ == '__main__':
     #とりあえず5分足，5期間安値・高値でエントリー，クローズする設定
     channelBreakOut = ChannelBreakOut()
     channelBreakOut.entryTerm = 5
-    channelBreakOut.closeTerm = 5
+    channelBreakOut.closeTerm = 15
     channelBreakOut.rangeTh = 0.0005
     channelBreakOut.rangeTerm = 15
     channelBreakOut.waitTerm =5
@@ -664,5 +640,5 @@ if __name__ == '__main__':
     channelBreakOut.margin = 2
 
     #実働
-    channelBreakOut.loop(channelBreakOut.entryTerm, channelBreakOut.closeTerm, channelBreakOut.rangeTh, channelBreakOut.rangeTerm, channelBreakOut.waitTerm, channelBreakOut.waitTh,channelBreakOut.candleTerm)
+    channelBreakOut.loop(channelBreakOut.entryTerm, channelBreakOut.closeTerm, channelBreakOut.rangeTh, channelBreakOut.rangeTerm, channelBreakOut.waitTerm, channelBreakOut.waitTh)
     
