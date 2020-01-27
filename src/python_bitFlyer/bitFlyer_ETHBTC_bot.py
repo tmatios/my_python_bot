@@ -3,7 +3,7 @@
 ### https://bitcforex.com
 import sys,os
 import pybitflyer
-#import py_bitflyer_jsonrpc
+import py_bitflyer_jsonrpc
 import json
 import requests
 import logging
@@ -18,8 +18,6 @@ from pubnub.pnconfiguration import PNConfiguration
 # from tornado import gen
 import threading
 from collections import deque
-### -0.03 ETH IS STOP_LOSS(POSITION)
-LOSS_CUT = -0.0300
 #####################
 # ログの出力名を設定（1）
 logger = logging.getLogger('bitFlyer_ETHBTC_bot')
@@ -53,10 +51,10 @@ class ChannelBreakOut:
         #注文執行コスト．遅延などでこの値幅を最初から取られていると仮定する
         self._cost = 0.1
         self.order = Order()
-        self.api = pybitflyer.API("Your API Key", "Your API Secret Key")
+        self.api = pybitflyer.API("EmF3NxoU7SEHup4LByMuFw", "GMtQQSfvdaWbRfCAk4SZUuJHaB5kfSpsJJ7kTiBbwzQ=")
 
         #ラインに稼働状況を通知
-        self.line_notify_token = 'Your Line Token'
+        self.line_notify_token = 'tHtMkYs5YRjxUl7tpYAxZjOUKRJT6ZWAv9pK0XLgmCh'
         self.line_notify_api = 'https://notify-api.line.me/api/notify'
         ## 内部計算用損益
 
@@ -418,22 +416,22 @@ class ChannelBreakOut:
 
             try :
                 ### print("get ticker!!!!!!!!!!!!!!!!!!!")
-                ticker = self.api.ticker(product_code=self.product_code)
+                #ticker = self.api.ticker(product_code=self.product_code)
                 # Realtime API接続用オブジェクトを生成
-                ### rpc = py_bitflyer_jsonrpc.BitflyerJSON_RPC(symbol=self.product_code)
+                rpc = py_bitflyer_jsonrpc.BitflyerJSON_RPC(symbol=self.product_code)
                 # Ticker情報を取得します
-                ### ticker = rpc.get_ticker()
+                ticker = rpc.get_ticker()
                 ## print("\n\n最新のTicker情報です:")
                 ## json.dump(ticker, sys.stdout, indent=2)
+                best_ask = ticker["best_ask"]
+                best_bid = ticker["best_bid"]
+                ## print("best_ask=",best_ask)
+                ## print("best_bit=",best_bid)
             except:
                 print("Unknown error happend when you requested ticker.")
                 time.sleep(1)
             finally:
                 pass
-            best_ask = ticker["best_ask"]
-            best_bid = ticker["best_bid"]
-            ## print("best_ask=",best_ask)
-            ## print("best_bit=",best_bid)
             #ここからエントリー，クローズ処理
             if pos == 0 and not isRange[-1]:
                 #ロングエントリー
@@ -492,77 +490,63 @@ class ChannelBreakOut:
             elif pos == 1:
                 #ロングクローズ
                 if judgement[2]:
-                    # マイナス損益だったらSKIPする。(fxplan.com Add)
                     plRange = lastPositionPrice - best_ask
                     pl.append(pl[-1] + plRange * lot)
                     profitPos = pl[-1]
                     #print("Profit=" + str(profitPos))
                     logger.info("Long Close Profit=" + str(profitPos))
-                    if ((profitPos > self.cost*self.lot*self.margin*10*10*10)\
-                      or (profitPos < LOSS_CUT)):
-                        print(datetime.datetime.now())
-                        print("market SELL order Lot=",lot)
-                        self.order.market(size=lot,side="SELL")
-                        pos -= 1
-                        mes = None
-                        if (profitPos>0.0): mes = " +Profit"
-                        else: mes = " -Loss"
-                        message = "bitFlyer_Bot(ETHBTC) Long Close Lot:{}, Price:{}, pl:{}, Result:{}".format(lot, best_bid, profitPos, mes)
-                        fileName = self.describePLForNotification(pl, df_candleStick)
-                        self.lineNotify(message,fileName)
-                        logger.info(message)
-                        #一定以上の値幅を取った場合，次の10トレードはロットを1/10に落とす．
-                        if plRange > waitTh:
-                            waitTerm = originalWaitTerm
-                            lot = round(originalLot/10,3)
-                        elif waitTerm > 0:
-                            waitTerm -= 1
-                            lot = round(originalLot/10,3)
-                        if waitTerm == 0:
-                             lot = originalLot
-                        lastSide = -1
-                        time.sleep(10)
-                    else:
-                        #print("Skip Long Signal for Loss:" + "{}".format(profitPos))
-                        logger.info("Skip Long Signal for Loss:" + "{}".format(profitPos))
-                        time.sleep(10)
+                    print(datetime.datetime.now())
+                    print("market SELL order Lot=",lot)
+                    self.order.market(size=lot,side="SELL")
+                    pos -= 1
+                    mes = None
+                    if (profitPos>0.0): mes = " +Profit"
+                    else: mes = " -Loss"
+                    message = "bitFlyer_Bot(ETHBTC) Long Close Lot:{}, Price:{}, pl:{}, Result:{}".format(lot, best_bid, profitPos, mes)
+                    fileName = self.describePLForNotification(pl, df_candleStick)
+                    self.lineNotify(message,fileName)
+                    logger.info(message)
+                    #一定以上の値幅を取った場合，次の10トレードはロットを1/10に落とす．
+                    if plRange > waitTh:
+                        waitTerm = originalWaitTerm
+                        lot = round(originalLot/10,3)
+                    elif waitTerm > 0:
+                        waitTerm -= 1
+                        lot = round(originalLot/10,3)
+                    if waitTerm == 0:
+                        lot = originalLot
+                    lastSide = -1
+                    time.sleep(10)
             elif pos == -1:
                 #ショートクローズ
                 if judgement[3]:
-                    # マイナス損益だったらSKIPする。(fxplan.com Add)
                     plRange = best_bid - lastPositionPrice
                     pl.append(pl[-1] + plRange * lot)
                     profitPos = pl[-1]
                     #print("Profit=" + str(profitPos))
                     #logger.info("Short Close Profit=" + str(profitPos))
-                    if ((profitPos > self.cost*self.lot*self.margin*10*10*10)\
-                      or (profitPos < LOSS_CUT)):
-                        print(datetime.datetime.now())
-                        print("market BUY order Lot=",lot)
-                        self.order.market(size=lot, side="BUY")
-                        pos += 1
-                        mes = None
-                        if (profitPos>0.0): mes = " +Profit"
-                        else: mes = " -Loss"
-                        message = "bitFlyer_Bot(ETHBTC) Short Close Lot:{}, Price:{}, pl:{}, Result:{}".format(lot, best_ask, profitPos, mes)
-                        fileName = self.describePLForNotification(pl, df_candleStick)
-                        self.lineNotify(message,fileName)
-                        logger.info(message)
-                        #一定以上の値幅を取った場合，次の10トレードはロットを1/10に落とす．
-                        if plRange > waitTh:
-                            waitTerm = originalWaitTerm
-                            lot = round(originalLot/10,3)
-                        elif waitTerm > 0:
-                            waitTerm -= 1
-                            lot = round(originalLot/10,3)
-                        if waitTerm == 0:
-                            lot = originalLot
-                        lastSide = 1
-                        time.sleep(10)
-                    else:
-                        #print("Skip Short Signal for Loss:" + "{}".format(profitPos))
-                        logger.info("Skip Short Signal for Loss:" + "{}".format(profitPos))
-                        time.sleep(10)
+                    print(datetime.datetime.now())
+                    print("market BUY order Lot=",lot)
+                    self.order.market(size=lot, side="BUY")
+                    pos += 1
+                    mes = None
+                    if (profitPos>0.0): mes = " +Profit"
+                    else: mes = " -Loss"
+                    message = "bitFlyer_Bot(ETHBTC) Short Close Lot:{}, Price:{}, pl:{}, Result:{}".format(lot, best_ask, profitPos, mes)
+                    fileName = self.describePLForNotification(pl, df_candleStick)
+                    self.lineNotify(message,fileName)
+                    logger.info(message)
+                    #一定以上の値幅を取った場合，次の10トレードはロットを1/10に落とす．
+                    if plRange > waitTh:
+                        waitTerm = originalWaitTerm
+                        lot = round(originalLot/10,3)
+                    elif waitTerm > 0:
+                        waitTerm -= 1
+                        lot = round(originalLot/10,3)
+                    if waitTerm == 0:
+                        lot = originalLot
+                    lastSide = 1
+                    time.sleep(10)
 #
             time.sleep(5)
             message = "Waiting for channelbreaking."
@@ -603,8 +587,8 @@ class ChannelBreakOut:
 class Order:
     def __init__(self):
         self.product_code = "ETH_BTC"
-        self.key = "Your API Key"
-        self.secret = "Your API Secret Key"
+        self.key = "EmF3NxoU7SEHup4LByMuFw"
+        self.secret = "GMtQQSfvdaWbRfCAk4SZUuJHaB5kfSpsJJ7kTiBbwzQ="
         self.api = pybitflyer.API(self.key, self.secret)
 
     def market(self, side, size, minute_to_expire= None):
@@ -629,12 +613,12 @@ class Order:
 if __name__ == '__main__':
     #とりあえず5分足，5期間安値・高値でエントリー，クローズする設定
     channelBreakOut = ChannelBreakOut()
-    channelBreakOut.entryTerm = 5
-    channelBreakOut.closeTerm = 15
-    channelBreakOut.rangeTh = 0.0005
-    channelBreakOut.rangeTerm = 15
+    channelBreakOut.entryTerm = 12
+    channelBreakOut.closeTerm = 12
+    channelBreakOut.rangeTh = None
+    channelBreakOut.rangeTerm = None
     channelBreakOut.waitTerm =5
-    channelBreakOut.waitTh = 0.05
+    channelBreakOut.waitTh = 0.005
     channelBreakOut.candleTerm = "5T"
     channelBreakOut.cost = 0.1
     channelBreakOut.margin = 2
