@@ -3,7 +3,7 @@
 ### https://bitcforex.com
 import sys,os
 import pybitflyer
-import py_bitflyer_jsonrpc
+#import py_bitflyer_jsonrpc
 import json
 import requests
 import logging
@@ -51,10 +51,10 @@ class ChannelBreakOut:
         #注文執行コスト．遅延などでこの値幅を最初から取られていると仮定する
         self._cost = 0.1
         self.order = Order()
-        self.api = pybitflyer.API("EmF3NxoU7SEHup4LByMuFw", "GMtQQSfvdaWbRfCAk4SZUuJHaB5kfSpsJJ7kTiBbwzQ=")
+        self.api = pybitflyer.API("Your API Key", "Your API Secret Key")
 
         #ラインに稼働状況を通知
-        self.line_notify_token = 'tHtMkYs5YRjxUl7tpYAxZjOUKRJT6ZWAv9pK0XLgmCh'
+        self.line_notify_token = 'Your Line Notify Token'
         self.line_notify_api = 'https://notify-api.line.me/api/notify'
         ## 内部計算用損益
 
@@ -345,7 +345,7 @@ class ChannelBreakOut:
 ######################
 ##### MAIN LOGIC #####
 ######################
-    def loop(self,entryTerm, closeTerm, rangeTh, rangeTerm,originalWaitTerm, waitTh,candleTerm=None):
+    def loop(self,entryTerm, closeTerm, rangeTh, rangeTerm,originalWaitTerm, waitTh,candleTerm):
         recheck_flg = 0
         """
         注文の実行ループを回す関数
@@ -364,7 +364,7 @@ class ChannelBreakOut:
         originalLot = self.lot
         waitTerm = 0
         try:
-           candleStick = self.getCandlestick(60, "60")
+           candleStick = self.getCandlestick(100, "60")
         except:
             print("Unknown error happend when you requested candleStick")
         if candleTerm == None:
@@ -376,12 +376,12 @@ class ChannelBreakOut:
 
         while True:
             #if datetime.datetime.now().second < 2 :
-            #5分ごとに基準ラインを更新
-            if datetime.datetime.now().minute % 5 == 0 and recheck_flg == 0:
+            #10分ごとに基準ラインを更新
+            if datetime.datetime.now().minute % 10 == 0 and recheck_flg == 0:
                 print("Renewing candleSticks")
                 recheck_flg = 1
                 try:
-                    candleStick = self.getCandlestick(60, "60")
+                    candleStick = self.getCandlestick(100, "60")
                 except:
                     print("Unknown error happend when you requested candleStick")
                 if candleTerm == None:
@@ -416,11 +416,11 @@ class ChannelBreakOut:
 
             try :
                 ### print("get ticker!!!!!!!!!!!!!!!!!!!")
-                #ticker = self.api.ticker(product_code=self.product_code)
+                ticker = self.api.ticker(product_code=self.product_code)
                 # Realtime API接続用オブジェクトを生成
-                rpc = py_bitflyer_jsonrpc.BitflyerJSON_RPC(symbol=self.product_code)
+                #rpc = py_bitflyer_jsonrpc.BitflyerJSON_RPC(symbol=self.product_code)
                 # Ticker情報を取得します
-                ticker = rpc.get_ticker()
+                #ticker = rpc.get_ticker()
                 ## print("\n\n最新のTicker情報です:")
                 ## json.dump(ticker, sys.stdout, indent=2)
                 best_ask = ticker["best_ask"]
@@ -429,7 +429,7 @@ class ChannelBreakOut:
                 ## print("best_bit=",best_bid)
             except:
                 print("Unknown error happend when you requested ticker.")
-                time.sleep(1)
+                time.sleep(60)
             finally:
                 pass
             #ここからエントリー，クローズ処理
@@ -587,8 +587,8 @@ class ChannelBreakOut:
 class Order:
     def __init__(self):
         self.product_code = "ETH_BTC"
-        self.key = "EmF3NxoU7SEHup4LByMuFw"
-        self.secret = "GMtQQSfvdaWbRfCAk4SZUuJHaB5kfSpsJJ7kTiBbwzQ="
+        self.key = "Your API Key"
+        self.secret = "Your API Secret Key"
         self.api = pybitflyer.API(self.key, self.secret)
 
     def market(self, side, size, minute_to_expire= None):
@@ -613,16 +613,16 @@ class Order:
 if __name__ == '__main__':
     #とりあえず5分足，5期間安値・高値でエントリー，クローズする設定
     channelBreakOut = ChannelBreakOut()
-    channelBreakOut.entryTerm = 12
-    channelBreakOut.closeTerm = 12
+    channelBreakOut.entryTerm = 60
+    channelBreakOut.closeTerm = 60
     channelBreakOut.rangeTh = None
-    channelBreakOut.rangeTerm = None
+    channelBreakOut.rangeTerm = 12 
     channelBreakOut.waitTerm =5
-    channelBreakOut.waitTh = 0.005
+    channelBreakOut.waitTh = 0.001
     channelBreakOut.candleTerm = "5T"
     channelBreakOut.cost = 0.1
     channelBreakOut.margin = 2
 
     #実働
-    channelBreakOut.loop(channelBreakOut.entryTerm, channelBreakOut.closeTerm, channelBreakOut.rangeTh, channelBreakOut.rangeTerm, channelBreakOut.waitTerm, channelBreakOut.waitTh)
+    channelBreakOut.loop(channelBreakOut.entryTerm, channelBreakOut.closeTerm, channelBreakOut.rangeTh, channelBreakOut.rangeTerm, channelBreakOut.waitTerm, channelBreakOut.waitTh,channelBreakOut.candleTerm)
     
