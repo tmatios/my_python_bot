@@ -154,23 +154,30 @@ class ChannelBreakOut:
         lot = math.floor(margin*10**(-4))*10**(-2)*self.cost
         return round(lot,3)
 
-    def calculateLines(self, df_candleStick, term):
+    def calculateLines(self, df_candleStick, term, flag):
         """
-
+        Flag=0:Open, Flag=1:Close
         期間高値・安値を計算する．
         candleStickはcryptowatchのローソク足．termは安値，高値を計算する期間．（5ならローソク足5本文の安値，高値．)
         """
         lowLine = []
         highLine = []
+
         for i in range(len(df_candleStick.index)):
             if i < term:
                 lowLine.append(df_candleStick["high"][i])
-                highLine.append(df_candleStick["low"][i])
+                highLine.append(df_candleStick["low"][i])           
             else:
-                low = min([price for price in df_candleStick["low"][i-term:i]])
-                high = max([price for price in df_candleStick["high"][i-term:i]])
-                lowLine.append(low)
-                highLine.append(high)
+                if(flag==0):
+                    low = min([price for price in df_candleStick["open"][i-term:i]])
+                    high = max([price for price in df_candleStick["open"][i-term:i]])
+                    lowLine.append(low)
+                    highLine.append(high)
+                else:
+                    low = min([price for price in df_candleStick["close"][i-term:i]])
+                    high = max([price for price in df_candleStick["close"][i-term:i]])
+                    lowLine.append(low)
+                    highLine.append(high)
         return (lowLine, highLine)
 
     def calculatePriceRange(self, df_candleStick, term):
@@ -364,24 +371,23 @@ class ChannelBreakOut:
         originalLot = self.lot
         waitTerm = 0
         try:
-           candleStick = self.getCandlestick(100, "60")
+           candleStick = self.getCandlestick(120, "60")
         except:
             print("Unknown error happend when you requested candleStick")
         if candleTerm == None:
             df_candleStick = self.fromListToDF(candleStick)
         else:
             df_candleStick = self.processCandleStick(candleStick, candleTerm)
-        entryLowLine, entryHighLine = self.calculateLines(df_candleStick, entryTerm)
-        closeLowLine, closeHighLine = self.calculateLines(df_candleStick, closeTerm)
+        entryLowLine, entryHighLine = self.calculateLines(df_candleStick, entryTerm,0)
+        closeLowLine, closeHighLine = self.calculateLines(df_candleStick, closeTerm,1)
 
         while True:
-            #if datetime.datetime.now().second < 2 :
-            #10分ごとに基準ラインを更新
-            if datetime.datetime.now().minute % 10 == 0 and recheck_flg == 0:
+            #5分ごとに基準ラインを更新
+            if datetime.datetime.now().minute % 5 == 0 and recheck_flg == 0:
                 print("Renewing candleSticks")
                 recheck_flg = 1
                 try:
-                    candleStick = self.getCandlestick(100, "60")
+                    candleStick = self.getCandlestick(120, "60")
                 except:
                     print("Unknown error happend when you requested candleStick")
                 if candleTerm == None:
@@ -389,9 +395,9 @@ class ChannelBreakOut:
                     #print("df_candleStick_01=",df_candleStick)
                 else:
                     df_candleStick = self.processCandleStick(candleStick, candleTerm)
-                    print("df_candleStick_02=",df_candleStick)
-                entryLowLine, entryHighLine = self.calculateLines(df_candleStick, entryTerm)
-                closeLowLine, closeHighLine = self.calculateLines(df_candleStick, closeTerm)
+                    #print("df_candleStick_02=",df_candleStick)
+                entryLowLine, entryHighLine = self.calculateLines(df_candleStick, entryTerm,0)
+                closeLowLine, closeHighLine = self.calculateLines(df_candleStick, closeTerm,1)
 #
                 #logger.info("entryLowLine=",str(entryLowLine))
                 #logger.info("entryHighLine=",str(entryHighLine))
@@ -401,8 +407,6 @@ class ChannelBreakOut:
             else:
                 recheck_flg = 0
             #直近約定件数30件の高値と安値
-            #high = max([self.executions[-1-i]["price"] for i in range(30)])
-            #low = min([self.executions[-1-i]["price"] for i in range(30)])
             high = max([candleStick[-1-i][4] for i in range(30)])
             low = min([candleStick[-1-i][4] for i in range(30)])
 #
@@ -417,16 +421,8 @@ class ChannelBreakOut:
             try :
                 ### print("get ticker!!!!!!!!!!!!!!!!!!!")
                 ticker = self.api.ticker(product_code=self.product_code)
-                # Realtime API接続用オブジェクトを生成
-                #rpc = py_bitflyer_jsonrpc.BitflyerJSON_RPC(symbol=self.product_code)
-                # Ticker情報を取得します
-                #ticker = rpc.get_ticker()
-                ## print("\n\n最新のTicker情報です:")
-                ## json.dump(ticker, sys.stdout, indent=2)
                 best_ask = ticker["best_ask"]
                 best_bid = ticker["best_bid"]
-                ## print("best_ask=",best_ask)
-                ## print("best_bit=",best_bid)
             except:
                 print("Unknown error happend when you requested ticker.")
                 time.sleep(60)
@@ -555,33 +551,6 @@ class ChannelBreakOut:
                 if(message != "Waiting for channelbreaking."):
                 	self.lineNotify(message)
                 	logger.info(message)
-#
-    def getSpecifiedCandlestick(self,number, period, start_timestamp, end_timestamp):
-        """
-        number:ローソク足の数．period:ローソク足の期間（文字列で秒数を指定，Ex:1分足なら"60"）．cryptowatchはときどきおかしなデータ（price=0）が含まれるのでそれを除く
-        """
-        # ローソク足の時間を指定
-        periods = [period]
-        # クエリパラメータを指定
-        query = {"periods": ','.join(periods), "after": str(int(start_timestamp)), "before": str(int(end_timestamp))}
-        # ローソク足取得
-        try:
-            res = json.loads(requests.get("https://api.cryptowat.ch/markets/bitflyer/ETHBTC/ohlc", params=query).text)
-            res = res["result"]
-        except:
-            print(res)
-        # ローソク足のデータを入れる配列．
-        data = []
-        for i in periods:
-            row = res[i]
-            length = len(row)
-            for column in row[:length - (number + 1):-1]:
-                # dataへローソク足データを追加．
-                if column[4] != 0:
-                    column = column[0:6]
-                    data.append(column)
-        return data[::-1]
-
 
 #注文処理をまとめている
 class Order:
@@ -616,9 +585,9 @@ if __name__ == '__main__':
     channelBreakOut.entryTerm = 60
     channelBreakOut.closeTerm = 60
     channelBreakOut.rangeTh = None
-    channelBreakOut.rangeTerm = 12 
+    channelBreakOut.rangeTerm = 5 
     channelBreakOut.waitTerm =5
-    channelBreakOut.waitTh = 0.001
+    channelBreakOut.waitTh = 0.05
     channelBreakOut.candleTerm = "5T"
     channelBreakOut.cost = 0.1
     channelBreakOut.margin = 2
