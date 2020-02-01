@@ -10,6 +10,8 @@ import logging
 import csv
 import math
 import pandas as pd
+import matplotlib
+import matplotlib.pyplot as plt
 import time
 import datetime
 from pubnub.callbacks import SubscribeCallback
@@ -51,7 +53,7 @@ class ChannelBreakOut:
         #注文執行コスト．遅延などでこの値幅を最初から取られていると仮定する
         self._cost = 0.1
         self.order = Order()
-        self.api = pybitflyer.API("Your API Key", "Your API Secret Key")
+        self.api = pybitflyer.API("Your API Key", "Yor API Secret")
 
         #ラインに稼働状況を通知
         self.line_notify_token = 'Your Line Notify Token'
@@ -165,8 +167,36 @@ class ChannelBreakOut:
 
         for i in range(len(df_candleStick.index)):
             if i < term:
-                lowLine.append(df_candleStick["high"][i])
-                highLine.append(df_candleStick["low"][i])           
+                if(flag==0):
+                    if(i>0):
+                        if(lowLine[i-1] > df_candleStick["open"][i]):
+                            lowLine.append(lowLine[i-1])
+                            lowLine[i-1] = df_candleStick["open"][i]
+                        else:
+                            lowLine.append(df_candleStick["open"][i])
+                        if(highLine[i-1] < df_candleStick["open"][i]):
+                            highLine.append(highLine[i-1])
+                            highLine[i-1]=df_candleStick["open"][i]
+                        else:
+                            highLine.append(df_candleStick["open"][i])
+                    else:
+                        lowLine.append(df_candleStick["open"][i])
+                        highLine.append(df_candleStick["open"][i])           
+                else:
+                    if(i>0):
+                        if(lowLine[i-1] > df_candleStick["close"][i]):
+                            lowLine.append(lowLine[i-1])
+                            lowLine[i-1]=df_candleStick["close"][i]
+                        else:
+                            lowLine.append(df_candleStick["close"][i])
+                        if(highLine[i-1] < df_candleStick["close"][i]):
+                            highLine.append(highLine[i-1])
+                            highLine[i-1]=df_candleStick["close"][i]
+                        else:
+                            highLine.append(df_candleStick["close"][i])
+                    else:
+                        lowLine.append(df_candleStick["close"][i])
+                        highLine.append(df_candleStick["close"][i]) 
             else:
                 if(flag==0):
                     low = min([price for price in df_candleStick["open"][i-term:i]])
@@ -179,6 +209,7 @@ class ChannelBreakOut:
                     lowLine.append(low)
                     highLine.append(high)
         return (lowLine, highLine)
+
 
     def calculatePriceRange(self, df_candleStick, term):
         """
@@ -317,9 +348,9 @@ class ChannelBreakOut:
                 pass
 
     def describePLForNotification(self, pl, df_candleStick):
-        import matplotlib
+        #import matplotlib
         matplotlib.use('Agg')
-        import matplotlib.pyplot as plt
+        #import matplotlib.pyplot as plt
         close = df_candleStick["close"]
         index = range(len(pl))
         # figure
@@ -357,8 +388,11 @@ class ChannelBreakOut:
         """
         注文の実行ループを回す関数
         """
+        entryLowLine = []
+        entryHighLine = []
+        closeLowLine = []
+        closeHighLine = []
         profitPos = 0.0
-        lastSide = 0
         okOrder = False
         pos = 0
         pl = []
@@ -395,155 +429,136 @@ class ChannelBreakOut:
                     #print("df_candleStick_01=",df_candleStick)
                 else:
                     df_candleStick = self.processCandleStick(candleStick, candleTerm)
-                    #print("df_candleStick_02=",df_candleStick)
+                    #print("df_candleStick_02=",df_candleStick)#
+            else:
+                recheck_flg = 0
+#####       
+            if(recheck_flg==1):
                 entryLowLine, entryHighLine = self.calculateLines(df_candleStick, entryTerm,0)
                 closeLowLine, closeHighLine = self.calculateLines(df_candleStick, closeTerm,1)
 #
-                #logger.info("entryLowLine=",str(entryLowLine))
-                #logger.info("entryHighLine=",str(entryHighLine))
-                #logger.info("entryHighLine=",str(closeLowLine))
-                #logger.info("closeHighLine=",str(closeHighLine))
-#
-            else:
-                recheck_flg = 0
-            #直近約定件数30件の高値と安値
-            high = max([candleStick[-1-i][4] for i in range(30)])
-            low = min([candleStick[-1-i][4] for i in range(30)])
-#
-            # print("high          =" + str(high))
-            # print("low           =" + str(low))
-            judgement = self.judgeForLoop(high, low, entryHighLine, entryLowLine, closeHighLine, closeLowLine)
-            # print("judgement=" + str(judgement[0])+":"+str(judgement[1])+":"+str(judgement[2])+":"+str(judgement[3]))
-#
-            #現在レンジ相場かどうか．
-            isRange = self.isRange(df_candleStick, rangeTerm, rangeTh)
+                #直近約定件数30件の高値と安値
+                high = max([candleStick[-1-i][4] for i in range(30)])
+                low = min([candleStick[-1-i][4] for i in range(30)])
 
-            try :
-                ### print("get ticker!!!!!!!!!!!!!!!!!!!")
-                ticker = self.api.ticker(product_code=self.product_code)
-                best_ask = ticker["best_ask"]
-                best_bid = ticker["best_bid"]
-            except:
-                print("Unknown error happend when you requested ticker.")
-                time.sleep(60)
-            finally:
-                pass
-            #ここからエントリー，クローズ処理
-            if pos == 0 and not isRange[-1]:
-                #ロングエントリー
-                if judgement[0]:
-                    okOrder = False
-                    if (lastSide != 0):
-                        if (lastSide == -1):
-                            plRange = lastPositionPrice - best_ask
-                            profitPos = (plRange * lot)
-                            if (profitPos > self.cost*self.lot*self.margin*10*10):
-                                logger.info("Long(Short->Long) Entry Profit=" + str(profitPos))
-                                okOrder = True
-                        elif(lastSide == 1):
-                            okOrder = False
-                    else:
-                        logger.info("First Long Entry Position=" + str(profitPos))
-                        okOrder = True
-                        lastSide = 1
-                    if (okOrder):
+                judgement = self.judgeForLoop(high, low, entryHighLine, entryLowLine, closeHighLine, closeLowLine)
+
+                #現在レンジ相場かどうか． 
+                isRange = self.isRange(df_candleStick, rangeTerm, rangeTh)
+                if(judgement[0]): logger.info("********** Buy signal ******Range+pos:" + str(isRange[-1]) +"-pos-" + str(pos))
+                if(judgement[1]): logger.info("********** Sell signal ******Range+pos:" + str(isRange[-1]) + "-pos-" + str(pos))
+                if(judgement[2]): logger.info("********** Sell(Long Close) signal ******Range+pos:" + str(isRange[-1]) + "-pos-" + str(pos))
+                if(judgement[3]): logger.info("********** Buy(Short Close) signal ******Range+pos:" + str(isRange[-1]) + "-pos-"+ str(pos))
+                try :
+                    ### print("get ticker!!!!!!!!!!!!!!!!!!!")
+                    ticker = self.api.ticker(product_code=self.product_code)
+                    best_ask = ticker["best_ask"]
+                    best_bid = ticker["best_bid"]
+                except:
+                    print("Unknown error happend when you requested ticker.")
+                    time.sleep(60)
+                finally:
+                    pass
+                #ここからエントリー，クローズ処理
+                if pos == 0 and not isRange[-1]:
+                    #ロングエントリー
+                    if judgement[0]:
+                        plRange = lastPositionPrice - best_ask
+                        profitPos = (plRange * lot)
+                        if (profitPos > self.cost*self.lot*self.margin*10*10):
+                            logger.info("Long Entry Profit=" + str(profitPos))
+                        logger.info("Long Entry Position=" + str(profitPos))
+                        okOrder = False
                         print(datetime.datetime.now())
                         print("market BUY order Lot=",lot)
                         self.order.market(size=lot, side="BUY")
                         pos += 1
+                        okOrder = True
                         message = "Long entry. Lot:{}, Price:{}".format(lot, best_ask)
                         self.lineNotify(message)
                         logger.info(message)
                         lastPositionPrice = best_ask
                         time.sleep(10)
-                #ショートエントリー
-                elif judgement[1]:
-                    okOrder = False
-                    if (lastSide != 0):
-                        if (lastSide == 1):
-                            plRange = best_bid - lastPositionPrice
-                            profitPos = (plRange * lot)
-                            if (profitPos > self.cost*self.lot*self.margin*10*10):
-                                logger.info("Long(Long-->Short) Entry Profit=" + str(profitPos))
-                                okOrder = True
-                        elif(lastSide == -1):
-                            okOrder = False
-                    else:
+                    #ショートエントリー
+                    elif judgement[1]:
+                        plRange = best_bid - lastPositionPrice
+                        profitPos = (plRange * lot)
+                        if (profitPos > self.cost*self.lot*self.margin*10*10):
+                            logger.info("Short Entry Profit=" + str(profitPos))
                         logger.info("First Short Entry Position=" + str(profitPos))
-                        okOrder = True
-                        lastSide = -1
-                    if (okOrder):
+                        okOrder = False
                         print(datetime.datetime.now())
                         print("market SELL order Lot=",lot)
                         self.order.market(size=lot,side="SELL")
+                        okOrder = False
                         pos -= 1
                         message = "Short entry. Lot:{}, Price:{}, ".format(lot, best_bid)
                         self.lineNotify(message)
                         logger.info(message)
                         lastPositionPrice = best_bid
                         time.sleep(10)
-
-            elif pos == 1:
-                #ロングクローズ
-                if judgement[2]:
-                    plRange = lastPositionPrice - best_ask
-                    pl.append(pl[-1] + plRange * lot)
-                    profitPos = pl[-1]
-                    #print("Profit=" + str(profitPos))
-                    logger.info("Long Close Profit=" + str(profitPos))
-                    print(datetime.datetime.now())
-                    print("market SELL order Lot=",lot)
-                    self.order.market(size=lot,side="SELL")
-                    pos -= 1
-                    mes = None
-                    if (profitPos>0.0): mes = " +Profit"
-                    else: mes = " -Loss"
-                    message = "bitFlyer_Bot(ETHBTC) Long Close Lot:{}, Price:{}, pl:{}, Result:{}".format(lot, best_bid, profitPos, mes)
-                    fileName = self.describePLForNotification(pl, df_candleStick)
-                    self.lineNotify(message,fileName)
-                    logger.info(message)
-                    #一定以上の値幅を取った場合，次の10トレードはロットを1/10に落とす．
-                    if plRange > waitTh:
-                        waitTerm = originalWaitTerm
-                        lot = round(originalLot/10,3)
-                    elif waitTerm > 0:
-                        waitTerm -= 1
-                        lot = round(originalLot/10,3)
-                    if waitTerm == 0:
-                        lot = originalLot
-                    lastSide = -1
-                    time.sleep(10)
-            elif pos == -1:
-                #ショートクローズ
-                if judgement[3]:
-                    plRange = best_bid - lastPositionPrice
-                    pl.append(pl[-1] + plRange * lot)
-                    profitPos = pl[-1]
-                    #print("Profit=" + str(profitPos))
-                    #logger.info("Short Close Profit=" + str(profitPos))
-                    print(datetime.datetime.now())
-                    print("market BUY order Lot=",lot)
-                    self.order.market(size=lot, side="BUY")
-                    pos += 1
-                    mes = None
-                    if (profitPos>0.0): mes = " +Profit"
-                    else: mes = " -Loss"
-                    message = "bitFlyer_Bot(ETHBTC) Short Close Lot:{}, Price:{}, pl:{}, Result:{}".format(lot, best_ask, profitPos, mes)
-                    fileName = self.describePLForNotification(pl, df_candleStick)
-                    self.lineNotify(message,fileName)
-                    logger.info(message)
-                    #一定以上の値幅を取った場合，次の10トレードはロットを1/10に落とす．
-                    if plRange > waitTh:
-                        waitTerm = originalWaitTerm
-                        lot = round(originalLot/10,3)
-                    elif waitTerm > 0:
-                        waitTerm -= 1
-                        lot = round(originalLot/10,3)
-                    if waitTerm == 0:
-                        lot = originalLot
-                    lastSide = 1
-                    time.sleep(10)
-#
+                elif pos == 1:
+                    #ロングクローズ
+                    if judgement[2]:
+                        plRange = lastPositionPrice - best_ask
+                        pl.append(pl[-1] + plRange * lot)
+                        profitPos = pl[-1]
+                        logger.info("Long Close Profit=" + str(profitPos))
+                        okOrder = False
+                        print(datetime.datetime.now())
+                        print("market SELL order Lot=",lot)
+                        self.order.market(size=lot,side="SELL")
+                        okOrder = True
+                        pos -= 1
+                        mes = None
+                        if (profitPos>0.0): mes = " +Profit"
+                        else: mes = " -Loss"
+                        message = "bitFlyer_Bot(ETHBTC) Long Close Lot:{}, Price:{}, pl:{}, Result:{}".format(lot, best_bid, profitPos, mes)
+                        fileName = self.describePLForNotification(pl, df_candleStick)
+                        self.lineNotify(message,fileName)
+                        logger.info(message)
+                        #一定以上の値幅を取った場合，次の10トレードはロットを1/10に落とす．
+                        if plRange > waitTh:
+                            waitTerm = originalWaitTerm
+                            lot = round(originalLot/10,3)
+                        elif waitTerm > 0:
+                            waitTerm -= 1
+                            lot = round(originalLot/10,3)
+                        if waitTerm == 0:
+                            lot = originalLot
+                        lastSide = -1
+                        time.sleep(10)
+                elif pos == -1:
+                    #ショートクローズ
+                    if judgement[3]:
+                        plRange = best_bid - lastPositionPrice
+                        pl.append(pl[-1] + plRange * lot)
+                        profitPos = pl[-1]
+                        okOrder = False
+                        print(datetime.datetime.now())
+                        print("market BUY order Lot=",lot)
+                        self.order.market(size=lot, side="BUY")
+                        okOrder = True
+                        pos += 1
+                        mes = None
+                        if (profitPos>0.0): mes = " +Profit"
+                        else: mes = " -Loss"
+                        message = "bitFlyer_Bot(ETHBTC) Short Close Lot:{}, Price:{}, pl:{}, Result:{}".format(lot, best_ask, profitPos, mes)
+                        fileName = self.describePLForNotification(pl, df_candleStick)
+                        self.lineNotify(message,fileName)
+                        logger.info(message)
+                        #一定以上の値幅を取った場合，次の10トレードはロットを1/10に落とす．
+                        if plRange > waitTh:
+                            waitTerm = originalWaitTerm
+                            lot = round(originalLot/10,3)
+                        elif waitTerm > 0:
+                            waitTerm -= 1
+                            lot = round(originalLot/10,3)
+                        if waitTerm == 0:
+                            lot = originalLot
+                        lastSide = 1
+                        time.sleep(10)
+#####
             time.sleep(5)
             message = "Waiting for channelbreaking."
             if datetime.datetime.now().minute % 60 == 0 and datetime.datetime.now().second == 0:
@@ -582,8 +597,8 @@ class Order:
 if __name__ == '__main__':
     #とりあえず5分足，5期間安値・高値でエントリー，クローズする設定
     channelBreakOut = ChannelBreakOut()
-    channelBreakOut.entryTerm = 60
-    channelBreakOut.closeTerm = 60
+    channelBreakOut.entryTerm = 30
+    channelBreakOut.closeTerm = 30
     channelBreakOut.rangeTh = None
     channelBreakOut.rangeTerm = 5 
     channelBreakOut.waitTerm =5
