@@ -53,7 +53,7 @@ class ChannelBreakOut:
         #注文執行コスト．遅延などでこの値幅を最初から取られていると仮定する
         self._cost = 0.1
         self.order = Order()
-        self.api = pybitflyer.API("Your API Key", "Yor API Secret")
+        self.api = pybitflyer.API("Your API Key", "Your API Secret")
 
         #ラインに稼働状況を通知
         self.line_notify_token = 'Your Line Notify Token'
@@ -445,10 +445,10 @@ class ChannelBreakOut:
 
                 #現在レンジ相場かどうか． 
                 isRange = self.isRange(df_candleStick, rangeTerm, rangeTh)
-                if(judgement[0]): logger.info("********** Buy signal ******Range+pos:" + str(isRange[-1]) +"-pos-" + str(pos))
-                if(judgement[1]): logger.info("********** Sell signal ******Range+pos:" + str(isRange[-1]) + "-pos-" + str(pos))
-                if(judgement[2]): logger.info("********** Sell(Long Close) signal ******Range+pos:" + str(isRange[-1]) + "-pos-" + str(pos))
-                if(judgement[3]): logger.info("********** Buy(Short Close) signal ******Range+pos:" + str(isRange[-1]) + "-pos-"+ str(pos))
+                #if(judgement[0]): logger.info("********** Buy signal ******Range+pos:" + str(isRange[-1]) +"-pos-" + str(pos))
+                #if(judgement[1]): logger.info("********** Sell signal ******Range+pos:" + str(isRange[-1]) + "-pos-" + str(pos))
+                #if(judgement[2]): logger.info("********** Sell(Long Close) signal ******Range+pos:" + str(isRange[-1]) + "-pos-" + str(pos))
+                #if(judgement[3]): logger.info("********** Buy(Short Close) signal ******Range+pos:" + str(isRange[-1]) + "-pos-"+ str(pos))
                 try :
                     ### print("get ticker!!!!!!!!!!!!!!!!!!!")
                     ticker = self.api.ticker(product_code=self.product_code)
@@ -497,9 +497,13 @@ class ChannelBreakOut:
                         logger.info(message)
                         lastPositionPrice = best_bid
                         time.sleep(10)
-                elif pos == 1:
+                elif not isRange[-1]:
                     #ロングクローズ
                     if judgement[2]:
+                        if(pos>0):
+                            plRange = lastPositionPrice - best_ask
+                        else:
+                            plRange = best_bid - lastPositionPrice
                         plRange = lastPositionPrice - best_ask
                         pl.append(pl[-1] + plRange * lot)
                         profitPos = pl[-1]
@@ -528,10 +532,12 @@ class ChannelBreakOut:
                             lot = originalLot
                         lastSide = -1
                         time.sleep(10)
-                elif pos == -1:
                     #ショートクローズ
                     if judgement[3]:
-                        plRange = best_bid - lastPositionPrice
+                        if(pos>0):
+                            plRange = lastPositionPrice - best_ask
+                        else:
+                            plRange = best_bid - lastPositionPrice
                         pl.append(pl[-1] + plRange * lot)
                         profitPos = pl[-1]
                         okOrder = False
@@ -572,7 +578,7 @@ class Order:
     def __init__(self):
         self.product_code = "ETH_BTC"
         self.key = "Your API Key"
-        self.secret = "Your API Secret Key"
+        self.secret = "Your API Secret"
         self.api = pybitflyer.API(self.key, self.secret)
 
     def market(self, side, size, minute_to_expire= None):
