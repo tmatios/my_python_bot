@@ -53,7 +53,7 @@ class ChannelBreakOut:
         #注文執行コスト．遅延などでこの値幅を最初から取られていると仮定する
         self._cost = 0.1
         self.order = Order()
-        self.api = pybitflyer.API("Your API Key", "Your API Secret")
+        self.api = pybitflyer.API("Your API Key", "Your API Secret Key")
 
         #ラインに稼働状況を通知
         self.line_notify_token = 'Your Line Notify Token'
@@ -497,7 +497,7 @@ class ChannelBreakOut:
                         logger.info(message)
                         lastPositionPrice = best_bid
                         time.sleep(10)
-                elif not isRange[-1]:
+                elif not isRange[-1] and pos > 0:
                     #ロングクローズ
                     if judgement[2]:
                         if(pos>0):
@@ -533,7 +533,7 @@ class ChannelBreakOut:
                         lastSide = -1
                         time.sleep(10)
                     #ショートクローズ
-                    if judgement[3]:
+                    if judgement[3] < pop < 0:
                         if(pos>0):
                             plRange = lastPositionPrice - best_ask
                         else:
@@ -578,7 +578,7 @@ class Order:
     def __init__(self):
         self.product_code = "ETH_BTC"
         self.key = "Your API Key"
-        self.secret = "Your API Secret"
+        self.secret = "Your API Secret Key"
         self.api = pybitflyer.API(self.key, self.secret)
 
     def market(self, side, size, minute_to_expire= None):
