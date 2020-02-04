@@ -53,7 +53,7 @@ class ChannelBreakOut:
         #注文執行コスト．遅延などでこの値幅を最初から取られていると仮定する
         self._cost = 0.1
         self.order = Order()
-        self.api = pybitflyer.API("Your API Key", "Your API Secret Key")
+        self.api = pybitflyer.API("Your API Key", "Yor API Secret Key")
 
         #ラインに稼働状況を通知
         self.line_notify_token = 'Your Line Notify Token'
@@ -438,10 +438,12 @@ class ChannelBreakOut:
                 closeLowLine, closeHighLine = self.calculateLines(df_candleStick, closeTerm,1)
 #
                 #直近約定件数30件の高値と安値
-                high = max([candleStick[-1-i][4] for i in range(30)])
-                low = min([candleStick[-1-i][4] for i in range(30)])
+                #high = max([candleStick[-1-i][4] for i in range(30)])
+                #low = min([candleStick[-1-i][4] for i in range(30)])
 
-                judgement = self.judgeForLoop(high, low, entryHighLine, entryLowLine, closeHighLine, closeLowLine)
+                #judgement = self.judgeForLoop(high, low, entryHighLine, entryLowLine, closeHighLine, closeLowLine)
+                #judgement = self.judge(df_candleStick, entryHighLine, entryLowLine, closeHighLine, closeLowLine, entryTerm)
+                judgement = self.judge(df_candleStick, entryHighLine, entryLowLine, closeHighLine, closeLowLine, entryTerm)
 
                 #現在レンジ相場かどうか． 
                 isRange = self.isRange(df_candleStick, rangeTerm, rangeTh)
@@ -466,15 +468,15 @@ class ChannelBreakOut:
                         plRange = lastPositionPrice - best_ask
                         profitPos = (plRange * lot)
                         if (profitPos > self.cost*self.lot*self.margin*10*10):
-                            logger.info("Long Entry Profit=" + str(profitPos))
-                        logger.info("Long Entry Position=" + str(profitPos))
+                            logger.info("Long Entry Profit=" + "{}".format(profitPos))
+                        logger.info("Long Entry Position=" + "{}".format(profitPos))
                         okOrder = False
                         print(datetime.datetime.now())
                         print("market BUY order Lot=",lot)
                         self.order.market(size=lot, side="BUY")
                         pos += 1
                         okOrder = True
-                        message = "Long entry. Lot:{}, Price:{}".format(lot, best_ask)
+                        message = "Long entry Lot=" + "{}".format(lot) + "@price={}".format(best_ask)
                         self.lineNotify(message)
                         logger.info(message)
                         lastPositionPrice = best_ask
@@ -484,30 +486,26 @@ class ChannelBreakOut:
                         plRange = best_bid - lastPositionPrice
                         profitPos = (plRange * lot)
                         if (profitPos > self.cost*self.lot*self.margin*10*10):
-                            logger.info("Short Entry Profit=" + str(profitPos))
-                        logger.info("First Short Entry Position=" + str(profitPos))
+                            logger.info("Short Entry Profit=" + "{}".format(profitPos))
+                        logger.info("Short Entry Position=" + "{}".format(profitPos))
                         okOrder = False
                         print(datetime.datetime.now())
                         print("market SELL order Lot=",lot)
                         self.order.market(size=lot,side="SELL")
                         okOrder = False
                         pos -= 1
-                        message = "Short entry. Lot:{}, Price:{}, ".format(lot, best_bid)
+                        message = "Short entry Lot=" + "{}".format(lot) + "@price={}".format(best_bid)
                         self.lineNotify(message)
                         logger.info(message)
                         lastPositionPrice = best_bid
                         time.sleep(10)
-                elif not isRange[-1] and pos > 0:
+                elif judgement[2] and not isRange[-1] and pos > 0:
                     #ロングクローズ
                     if judgement[2]:
-                        if(pos>0):
-                            plRange = lastPositionPrice - best_ask
-                        else:
-                            plRange = best_bid - lastPositionPrice
                         plRange = lastPositionPrice - best_ask
                         pl.append(pl[-1] + plRange * lot)
                         profitPos = pl[-1]
-                        logger.info("Long Close Profit=" + str(profitPos))
+                        logger.info("Long Close Profit=" + "{}".format(profitPos))
                         okOrder = False
                         print(datetime.datetime.now())
                         print("market SELL order Lot=",lot)
@@ -532,38 +530,35 @@ class ChannelBreakOut:
                             lot = originalLot
                         lastSide = -1
                         time.sleep(10)
-                    #ショートクローズ
-                    if judgement[3] < pop < 0:
-                        if(pos>0):
-                            plRange = lastPositionPrice - best_ask
-                        else:
-                            plRange = best_bid - lastPositionPrice
-                        pl.append(pl[-1] + plRange * lot)
-                        profitPos = pl[-1]
-                        okOrder = False
-                        print(datetime.datetime.now())
-                        print("market BUY order Lot=",lot)
-                        self.order.market(size=lot, side="BUY")
-                        okOrder = True
-                        pos += 1
-                        mes = None
-                        if (profitPos>0.0): mes = " +Profit"
-                        else: mes = " -Loss"
-                        message = "bitFlyer_Bot(ETHBTC) Short Close Lot:{}, Price:{}, pl:{}, Result:{}".format(lot, best_ask, profitPos, mes)
-                        fileName = self.describePLForNotification(pl, df_candleStick)
-                        self.lineNotify(message,fileName)
-                        logger.info(message)
-                        #一定以上の値幅を取った場合，次の10トレードはロットを1/10に落とす．
-                        if plRange > waitTh:
-                            waitTerm = originalWaitTerm
-                            lot = round(originalLot/10,3)
-                        elif waitTerm > 0:
-                            waitTerm -= 1
-                            lot = round(originalLot/10,3)
-                        if waitTerm == 0:
-                            lot = originalLot
-                        lastSide = 1
-                        time.sleep(10)
+                #ショートクローズ
+                if judgement[3] and not isRange[-1] and pos < 0:
+                    plRange = best_bid - lastPositionPrice
+                    pl.append(pl[-1] + plRange * lot)
+                    profitPos = pl[-1]
+                    okOrder = False
+                    print(datetime.datetime.now())
+                    print("market BUY order Lot=",lot)
+                    self.order.market(size=lot, side="BUY")
+                    okOrder = True
+                    pos += 1
+                    mes = None
+                    if (profitPos>0.0): mes = " +Profit"
+                    else: mes = " -Loss"
+                    message = "bitFlyer_Bot(ETHBTC) Short Close Lot:{}, Price:{}, pl:{}, Result:{}".format(lot, best_ask, profitPos, mes)
+                    fileName = self.describePLForNotification(pl, df_candleStick)
+                    self.lineNotify(message,fileName)
+                    logger.info(message)
+                    #一定以上の値幅を取った場合，次の10トレードはロットを1/10に落とす．
+                    if plRange > waitTh:
+                        waitTerm = originalWaitTerm
+                        lot = round(originalLot/10,3)
+                    elif waitTerm > 0:
+                        waitTerm -= 1
+                        lot = round(originalLot/10,3)
+                    if waitTerm == 0:
+                        lot = originalLot
+                    lastSide = 1
+                    time.sleep(10)
 #####
             time.sleep(5)
             message = "Waiting for channelbreaking."
