@@ -3,12 +3,14 @@
 ### https://bitcforex.com
 import sys,os
 import pybitflyer
+import ccxt
 #import py_bitflyer_jsonrpc
 import json
 import requests
 import logging
 import csv
 import math
+import numpy as np
 import pandas as pd
 import matplotlib
 import matplotlib.pyplot as plt
@@ -52,13 +54,16 @@ class ChannelBreakOut:
         self._pos = 0
         #注文執行コスト．遅延などでこの値幅を最初から取られていると仮定する
         self._cost = 0.1
+        self._risk = 0.3
         self.order = Order()
-        self.api = pybitflyer.API("Your API Key", "Your API Secret key")
-
+        self.api = pybitflyer.API("Your API Key", "Your API Secret Key")
+        self.bitflyer = ccxt.bitflyer()
+        self.bitflyer.apiKey = 'Your API Key'
+        self.bitflyer.secret = 'Your API Secret Key'
+#
         #ラインに稼働状況を通知
         self.line_notify_token = 'Your Line Notify Token'
         self.line_notify_api = 'https://notify-api.line.me/api/notify'
-        ## 内部計算用損益
 
     @property
     def cost(self):
@@ -67,6 +72,14 @@ class ChannelBreakOut:
     @cost.setter
     def cost(self, value):
         self._cost = value
+
+    @property
+    def risk(self):
+        return self._risk
+
+    @risk.setter
+    def risk(self, value):
+        self._risk = value
 
     @property
     def candleTerm(self):
@@ -148,6 +161,39 @@ class ChannelBreakOut:
     @closeTerm.setter
     def closeTerm(self, val):
         self._closeTerm = int(val)
+
+    # 口座残高を取得する関数
+    def bitflyer_collateral(self):
+	    while True:
+		    try:
+			    collateral = self.bitflyer.private_get_getcollateral()
+			    print("現在のアカウント残高(BTC--->JPY)は{}円です".format( int(collateral["collateral"]) ))
+			    return int( collateral["collateral"] )
+		    except ccxt.BaseError as e:
+			    print("BitflyerのAPIでの口座残高取得に失敗しました ： ", e)
+			    print("20秒待機してやり直します")
+			    time.sleep(20)
+
+    # 注文ロットを計算する関数
+    def calculate_lot(self, df_candleStick, margin, risk, term ):
+        data = 0
+        lot = 0
+        able_lot = 0.0
+        balance = self.bitflyer_collateral()
+        for i in range(len(df_candleStick.index)):
+            try:
+                data = np.mean([price for price in df_candleStick["close"][i-term:i]])
+            except:
+                pass
+        #print("data=" +  str(data))
+        #able_lot = math.floor(balance/(data*100000)*margin/100)
+        #able_lot = float((balance/(data*1000000)*margin)/1000)
+        able_lot = float((balance*(data*10)*margin*risk)/(10*10*10*10*10*10))
+        lot = round(able_lot,3)
+        #print("許容リスクから購入できる枚数は最大{}BTCまでです".format(calc_lot))
+        print("証拠金から購入できる枚数は最大{}ETHまでです".format(lot))
+        return lot
+
 
     def calculateLot(self, margin):
         """
@@ -398,11 +444,6 @@ class ChannelBreakOut:
         pl = []
         pl.append(0)
         lastPositionPrice = 0
-        lot = self.lot
-        lot = self.calculateLot(self.margin)
-        if (lot < self.lot):
-            lot = self.lot
-        originalLot = self.lot
         waitTerm = 0
         try:
            candleStick = self.getCandlestick(120, "60")
@@ -414,7 +455,7 @@ class ChannelBreakOut:
             df_candleStick = self.processCandleStick(candleStick, candleTerm)
         entryLowLine, entryHighLine = self.calculateLines(df_candleStick, entryTerm,0)
         closeLowLine, closeHighLine = self.calculateLines(df_candleStick, closeTerm,1)
-
+        #lot = self.calculate_lot(df_candleStick, self.margin, entryTerm)
         while True:
             #5分ごとに基準ラインを更新
             if datetime.datetime.now().minute % 5 == 0 and recheck_flg == 0:
@@ -436,7 +477,14 @@ class ChannelBreakOut:
             if(recheck_flg==1):
                 entryLowLine, entryHighLine = self.calculateLines(df_candleStick, entryTerm,0)
                 closeLowLine, closeHighLine = self.calculateLines(df_candleStick, closeTerm,1)
-#
+####   
+###               lot = self.lot
+###               #lot = self.calculateLot(self.margin)
+###                lot = self.calculate_lot(df_candleStick, self.margin, self.risk, entryTerm)
+###                if (lot < self.lot):
+###                    lot = self.lot
+###                originalLot = self.lot
+####
                 #直近約定件数30件の高値と安値
                 #high = max([candleStick[-1-i][4] for i in range(30)])
                 #low = min([candleStick[-1-i][4] for i in range(30)])
@@ -465,6 +513,13 @@ class ChannelBreakOut:
                 if pos == 0 and not isRange[-1]:
                     #ロングエントリー
                     if judgement[0]:
+###   
+                        lot = self.lot
+                        lot = self.calculate_lot(df_candleStick, self.margin, self.risk, entryTerm)
+                        if (lot < self.lot):
+                            lot = self.lot
+                        originalLot = self.lot
+####
                         plRange = lastPositionPrice - best_ask
                         profitPos = (plRange * lot)
                         if (profitPos > self.cost*self.lot*self.margin*10*10):
@@ -483,6 +538,13 @@ class ChannelBreakOut:
                         time.sleep(10)
                     #ショートエントリー
                     elif judgement[1]:
+###   
+                        lot = self.lot
+                        lot = self.calculate_lot(df_candleStick, self.margin, self.risk, entryTerm)
+                        if (lot < self.lot):
+                            lot = self.lot
+                        originalLot = self.lot
+####
                         plRange = best_bid - lastPositionPrice
                         profitPos = (plRange * lot)
                         if (profitPos > self.cost*self.lot*self.margin*10*10):
@@ -501,37 +563,50 @@ class ChannelBreakOut:
                         time.sleep(10)
                 elif judgement[2] and not isRange[-1] and pos > 0 and (lastPositionPrice < best_ask):
                     #ロングクローズ
-                    if judgement[2]:
-                        plRange = lastPositionPrice - best_ask
-                        pl.append(pl[-1] + plRange * lot)
-                        profitPos = pl[-1]
-                        logger.info("Long Close Profit=" + "{}".format(profitPos))
-                        okOrder = False
-                        print(datetime.datetime.now())
-                        print("market SELL order Lot=",lot)
-                        self.order.market(size=lot,side="SELL")
-                        okOrder = True
-                        pos -= 1
-                        mes = None
-                        if (profitPos>0.0): mes = " +Profit"
-                        else: mes = " -Loss"
-                        message = "bitFlyer_Bot(ETHBTC) Long Close Lot:{}, Price:{}, pl:{}, Result:{}".format(lot, best_bid, profitPos, mes)
-                        fileName = self.describePLForNotification(pl, df_candleStick)
-                        self.lineNotify(message,fileName)
-                        logger.info(message)
-                        #一定以上の値幅を取った場合，次の10トレードはロットを1/10に落とす．
-                        if plRange > waitTh:
-                            waitTerm = originalWaitTerm
-                            lot = round(originalLot/10,3)
-                        elif waitTerm > 0:
-                            waitTerm -= 1
-                            lot = round(originalLot/10,3)
-                        if waitTerm == 0:
-                            lot = originalLot
-                        lastSide = -1
-                        time.sleep(10)
+###   
+                    lot = self.lot
+                    lot = self.calculate_lot(df_candleStick, self.margin, self.risk, entryTerm)
+                    if (lot < self.lot):
+                        lot = self.lot
+                    originalLot = self.lot
+####
+                    plRange = lastPositionPrice - best_ask
+                    pl.append(pl[-1] + plRange * lot)
+                    profitPos = pl[-1]
+                    logger.info("Long Close Profit=" + "{}".format(profitPos))
+                    okOrder = False
+                    print(datetime.datetime.now())
+                    print("market SELL order Lot=",lot)
+                    self.order.market(size=lot,side="SELL")
+                    okOrder = True
+                    pos -= 1
+                    mes = None
+                    if (profitPos>0.0): mes = " +Profit"
+                    else: mes = " -Loss"
+                    message = "bitFlyer_Bot(ETHBTC) Long Close Lot:{}, Price:{}, pl:{}, Result:{}".format(lot, best_bid, profitPos, mes)
+                    fileName = self.describePLForNotification(pl, df_candleStick)
+                    self.lineNotify(message,fileName)
+                    logger.info(message)
+                    #一定以上の値幅を取った場合，次の10トレードはロットを1/10に落とす．
+                    if plRange > waitTh:
+                        waitTerm = originalWaitTerm
+                        lot = round(originalLot/10,3)
+                    elif waitTerm > 0:
+                        waitTerm -= 1
+                        lot = round(originalLot/10,3)
+                    if waitTerm == 0:
+                        lot = originalLot
+                    lastSide = -1
+                    time.sleep(10)
                 #ショートクローズ
-                if judgement[3] and not isRange[-1] and pos < 0 and (best_bid < lastPositionPrice):
+                if judgement[3] and not isRange[-1] and pos < 0 and (best_bid < lastPositionPrice) :
+###   
+                    lot = self.lot
+                    lot = self.calculate_lot(df_candleStick, self.margin, self.risk, entryTerm)
+                    if (lot < self.lot):
+                        lot = self.lot
+                    originalLot = self.lot
+####
                     plRange = best_bid - lastPositionPrice
                     pl.append(pl[-1] + plRange * lot)
                     profitPos = pl[-1]
@@ -578,6 +653,7 @@ class Order:
 
     def market(self, side, size, minute_to_expire= None):
         print("Order: Market. Side : {} Lots : {}".format(side, size))
+        #return False
         response = {"status": "internalError in order.py"}
         try:
             response = self.api.sendchildorder(product_code=self.product_code, child_order_type="MARKET", side=side, size=size, minute_to_expire = minute_to_expire)
@@ -606,6 +682,7 @@ if __name__ == '__main__':
     channelBreakOut.waitTh = 0.05
     channelBreakOut.candleTerm = "5T"
     channelBreakOut.cost = 0.1
+    channelBreakOut.cost = 0.3
     channelBreakOut.margin = 2
 
     #実働
