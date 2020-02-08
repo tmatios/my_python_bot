@@ -443,7 +443,9 @@ class ChannelBreakOut:
         pos = 0
         pl = []
         pl.append(0)
-        lastPositionPrice = 0
+        lastPositionAsk = 0.0
+        lastPositionBid = 0.0
+        counter = 0
         waitTerm = 0
         try:
            candleStick = self.getCandlestick(120, "60")
@@ -459,8 +461,9 @@ class ChannelBreakOut:
         while True:
             #5分ごとに基準ラインを更新
             if datetime.datetime.now().minute % 5 == 0 and recheck_flg == 0:
-                print("Renewing candleSticks")
+                print("Renewing candleSticks(" + str(counter) + ")")
                 recheck_flg = 1
+                counter += 1
                 try:
                     candleStick = self.getCandlestick(120, "60")
                 except:
@@ -473,14 +476,12 @@ class ChannelBreakOut:
                     #print("df_candleStick_02=",df_candleStick)#
             else:
                 recheck_flg = 0
+                counrer = 0
 #####       
             if(recheck_flg==1):
                 entryLowLine, entryHighLine = self.calculateLines(df_candleStick, entryTerm,0)
                 closeLowLine, closeHighLine = self.calculateLines(df_candleStick, closeTerm,1)
-####   
-###               lot = self.lot
 ###               #lot = self.calculateLot(self.margin)
-###                lot = self.calculate_lot(df_candleStick, self.margin, self.risk, entryTerm)
 ###                if (lot < self.lot):
 ###                    lot = self.lot
 ###                originalLot = self.lot
@@ -520,7 +521,7 @@ class ChannelBreakOut:
                             lot = self.lot
                         originalLot = self.lot
 ####
-                        plRange = lastPositionPrice - best_ask
+                        plRange = lastPositionBid - best_ask
                         profitPos = (plRange * lot)
                         if (profitPos > self.cost*self.lot*self.margin*10*10):
                             logger.info("Long Entry Profit=" + "{}".format(profitPos))
@@ -534,7 +535,9 @@ class ChannelBreakOut:
                         message = "Long entry Lot=" + "{}".format(lot) + "@price={}".format(best_ask)
                         self.lineNotify(message)
                         logger.info(message)
-                        lastPositionPrice = best_ask
+
+                        lastPositionAsk = best_ask
+                        lastPositionBid = best_bid
                         time.sleep(10)
                     #ショートエントリー
                     elif judgement[1]:
@@ -545,7 +548,7 @@ class ChannelBreakOut:
                             lot = self.lot
                         originalLot = self.lot
 ####
-                        plRange = best_bid - lastPositionPrice
+                        plRange = lastPositionAsk - best_bid
                         profitPos = (plRange * lot)
                         if (profitPos > self.cost*self.lot*self.margin*10*10):
                             logger.info("Short Entry Profit=" + "{}".format(profitPos))
@@ -559,9 +562,10 @@ class ChannelBreakOut:
                         message = "Short entry Lot=" + "{}".format(lot) + "@price={}".format(best_bid)
                         self.lineNotify(message)
                         logger.info(message)
-                        lastPositionPrice = best_bid
+                        lastPositionAsk = best_Ask
+                        lastPositionBid = best_bid
                         time.sleep(10)
-                elif judgement[2] and not isRange[-1] and pos > 0 and (lastPositionPrice < best_ask):
+                elif judgement[2] and pos > 0 and (lastPositionBid < best_bid):
                     #ロングクローズ
 ###   
                     lot = self.lot
@@ -570,13 +574,13 @@ class ChannelBreakOut:
                         lot = self.lot
                     originalLot = self.lot
 ####
-                    plRange = lastPositionPrice - best_ask
+                    plRange = lastPositionBid - best_bid
                     pl.append(pl[-1] + plRange * lot)
                     profitPos = pl[-1]
                     logger.info("Long Close Profit=" + "{}".format(profitPos))
                     okOrder = False
                     print(datetime.datetime.now())
-                    print("market SELL order Lot=",lot)
+                    print("market SELL(Long Close) order Lot=",lot)
                     self.order.market(size=lot,side="SELL")
                     okOrder = True
                     pos -= 1
@@ -597,9 +601,11 @@ class ChannelBreakOut:
                     if waitTerm == 0:
                         lot = originalLot
                     lastSide = -1
+                    lastPositionAsk = best_Ask
+                    lastPositionBid = best_bid
                     time.sleep(10)
                 #ショートクローズ
-                if judgement[3] and not isRange[-1] and pos < 0 and (best_bid < lastPositionPrice) :
+                if judgement[3] and pos < 0 and (best_Ask < lastPositionAsk) :
 ###   
                     lot = self.lot
                     lot = self.calculate_lot(df_candleStick, self.margin, self.risk, entryTerm)
@@ -607,12 +613,12 @@ class ChannelBreakOut:
                         lot = self.lot
                     originalLot = self.lot
 ####
-                    plRange = best_bid - lastPositionPrice
+                    plRange = lastPositionAsk - best_Ask
                     pl.append(pl[-1] + plRange * lot)
                     profitPos = pl[-1]
                     okOrder = False
                     print(datetime.datetime.now())
-                    print("market BUY order Lot=",lot)
+                    print("market BUY(Short Close) order Lot=",lot)
                     self.order.market(size=lot, side="BUY")
                     okOrder = True
                     pos += 1
@@ -633,6 +639,8 @@ class ChannelBreakOut:
                     if waitTerm == 0:
                         lot = originalLot
                     lastSide = 1
+                    lastPositionAsk = best_Ask
+                    lastPositionBid = best_bid
                     time.sleep(10)
 #####
             time.sleep(5)
