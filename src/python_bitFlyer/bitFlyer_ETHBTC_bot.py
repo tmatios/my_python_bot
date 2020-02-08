@@ -521,7 +521,7 @@ class ChannelBreakOut:
                             lot = self.lot
                         originalLot = self.lot
 ####
-                        plRange = lastPositionBid - best_ask
+                        plRange = lastPositionAsk - best_ask
                         profitPos = (plRange * lot)
                         if (profitPos > self.cost*self.lot*self.margin*10*10):
                             logger.info("Long Entry Profit=" + "{}".format(profitPos))
@@ -548,7 +548,7 @@ class ChannelBreakOut:
                             lot = self.lot
                         originalLot = self.lot
 ####
-                        plRange = lastPositionAsk - best_bid
+                        plRange = lastPositionBid - best_bid
                         profitPos = (plRange * lot)
                         if (profitPos > self.cost*self.lot*self.margin*10*10):
                             logger.info("Short Entry Profit=" + "{}".format(profitPos))
@@ -562,10 +562,10 @@ class ChannelBreakOut:
                         message = "Short entry Lot=" + "{}".format(lot) + "@price={}".format(best_bid)
                         self.lineNotify(message)
                         logger.info(message)
-                        lastPositionAsk = best_Ask
+                        lastPositionAsk = best_ask
                         lastPositionBid = best_bid
                         time.sleep(10)
-                elif judgement[2] and pos > 0 and (lastPositionBid < best_bid):
+                elif judgement[2] and pos > 0 and (lastPositionAsk < best_ask):
                     #ロングクローズ
 ###   
                     lot = self.lot
@@ -601,11 +601,11 @@ class ChannelBreakOut:
                     if waitTerm == 0:
                         lot = originalLot
                     lastSide = -1
-                    lastPositionAsk = best_Ask
+                    lastPositionAsk = best_ask
                     lastPositionBid = best_bid
                     time.sleep(10)
                 #ショートクローズ
-                if judgement[3] and pos < 0 and (best_Ask < lastPositionAsk) :
+                if judgement[3] and pos < 0 and (best_bid < lastPositionBid) :
 ###   
                     lot = self.lot
                     lot = self.calculate_lot(df_candleStick, self.margin, self.risk, entryTerm)
@@ -613,7 +613,7 @@ class ChannelBreakOut:
                         lot = self.lot
                     originalLot = self.lot
 ####
-                    plRange = lastPositionAsk - best_Ask
+                    plRange = lastPositionAsk - best_ask
                     pl.append(pl[-1] + plRange * lot)
                     profitPos = pl[-1]
                     okOrder = False
@@ -639,7 +639,7 @@ class ChannelBreakOut:
                     if waitTerm == 0:
                         lot = originalLot
                     lastSide = 1
-                    lastPositionAsk = best_Ask
+                    lastPositionAsk = best_ask
                     lastPositionBid = best_bid
                     time.sleep(10)
 #####
