@@ -393,6 +393,10 @@ class ChannelBreakOut:
             except:
                 pass
 
+    def my_round(self, x, d):
+        p = 10 ** 10
+        return float(math.floor((x * p) + math.copysign(0.5, x)))/p
+
     def describePLForNotification(self, pl, df_candleStick):
         #import matplotlib
         matplotlib.use('Agg')
@@ -566,7 +570,7 @@ class ChannelBreakOut:
                         lastPositionAsk = best_ask
                         lastPositionBid = best_bid
                         time.sleep(10)
-                elif judgement[2] and pos > 0 and (round((lastPositionAsk - best_ask),3) > 0.001):
+                elif judgement[2] and pos > 0 and (my_round((lastPositionAsk - best_ask),3) > 0.001):
                     #ロングクローズ
                     counrer = 0
 ###   
@@ -607,7 +611,7 @@ class ChannelBreakOut:
                     lastPositionBid = best_bid
                     time.sleep(10)
                 #ショートクローズ
-                if judgement[3] and pos < 0 and (round((lastPositionBid - best_bid),3) > 0.001) :
+                if judgement[3] and pos < 0 and (my_round((lastPositionBid - best_bid),3) > 0.001) :
                     counrer = 0
 ###   
                     lot = self.lot
@@ -647,7 +651,7 @@ class ChannelBreakOut:
                     time.sleep(10)
 ######
                 ### ロングクローズ
-                if (pos > 0 and counter > 120 and (round((lastPositionAsk - best_ask),2) > 0.01)):
+                if (pos > 0 and counter > 120 and (my_round((lastPositionAsk - best_ask),2) > 0.01)):
                     # ロングクローズ
                     counrer = 0
 ###   
@@ -688,7 +692,7 @@ class ChannelBreakOut:
                     lastPositionBid = best_bid
                     time.sleep(10)
                 #### ショートクローズ
-                if (pos < 0 and counter > 120 and (round((lastPositionBid - best_bid),2) > 0.01)):
+                if (pos < 0 and counter > 120 and (my_round((lastPositionBid - best_bid),2) > 0.01)):
                     # ショートクローズ
                     counrer = 0
 ###   
