@@ -476,7 +476,6 @@ class ChannelBreakOut:
                     #print("df_candleStick_02=",df_candleStick)#
             else:
                 recheck_flg = 0
-                counrer = 0
 #####       
             if(recheck_flg==1):
                 entryLowLine, entryHighLine = self.calculateLines(df_candleStick, entryTerm,0)
@@ -514,6 +513,7 @@ class ChannelBreakOut:
                 if pos == 0 and not isRange[-1]:
                     #ロングエントリー
                     if judgement[0]:
+                        counrer = 0
 ###   
                         lot = self.lot
                         lot = self.calculate_lot(df_candleStick, self.margin, self.risk, entryTerm)
@@ -541,6 +541,7 @@ class ChannelBreakOut:
                         time.sleep(10)
                     #ショートエントリー
                     elif judgement[1]:
+                        counrer = 0
 ###   
                         lot = self.lot
                         lot = self.calculate_lot(df_candleStick, self.margin, self.risk, entryTerm)
@@ -565,8 +566,9 @@ class ChannelBreakOut:
                         lastPositionAsk = best_ask
                         lastPositionBid = best_bid
                         time.sleep(10)
-                elif judgement[2] and pos > 0 and (lastPositionAsk < best_ask):
+                elif judgement[2] and pos > 0 and (round((lastPositionAsk - best_ask),3) > 0.001):
                     #ロングクローズ
+                    counrer = 0
 ###   
                     lot = self.lot
                     lot = self.calculate_lot(df_candleStick, self.margin, self.risk, entryTerm)
@@ -574,7 +576,7 @@ class ChannelBreakOut:
                         lot = self.lot
                     originalLot = self.lot
 ####
-                    plRange = lastPositionBid - best_bid
+                    plRange = lastPositionAsk - best_ask
                     pl.append(pl[-1] + plRange * lot)
                     profitPos = pl[-1]
                     logger.info("Long Close Profit=" + "{}".format(profitPos))
@@ -605,7 +607,49 @@ class ChannelBreakOut:
                     lastPositionBid = best_bid
                     time.sleep(10)
                 #ショートクローズ
-                if judgement[3] and pos < 0 and (best_bid < lastPositionBid) :
+                if judgement[3] and pos < 0 and (round((lastPositionBid - best_bid),3) > 0.001) :
+                    counrer = 0
+###   
+                    lot = self.lot
+                    lot = self.calculate_lot(df_candleStick, self.margin, self.risk, entryTerm)
+                    if (lot < self.lot):
+                        lot = self.lot
+                    originalLot = self.lot
+####
+                    plRange = lastPositionBid - best_bid
+                    pl.append(pl[-1] + plRange * lot)
+                    profitPos = pl[-1]
+                    okOrder = False
+                    print(datetime.datetime.now())
+                    print("market BUY(Short Close) order Lot=",lot)
+                    self.order.market(size=lot, side="BUY")
+                    okOrder = True
+                    pos += 1
+                    mes = None
+                    if (profitPos>0.0): mes = " +Profit"
+                    else: mes = " -Loss"
+                    message = "bitFlyer_Bot(ETHBTC) Short Close Lot:{}, Price:{}, pl:{}, Result:{}".format(lot, best_ask, profitPos, mes)
+                    fileName = self.describePLForNotification(pl, df_candleStick)
+                    self.lineNotify(message,fileName)
+                    logger.info(message)
+                    #一定以上の値幅を取った場合，次の10トレードはロットを1/10に落とす．
+                    if plRange > waitTh:
+                        waitTerm = originalWaitTerm
+                        lot = round(originalLot/10,3)
+                    elif waitTerm > 0:
+                        waitTerm -= 1
+                        lot = round(originalLot/10,3)
+                    if waitTerm == 0:
+                        lot = originalLot
+                    lastSide = 1
+                    lastPositionAsk = best_ask
+                    lastPositionBid = best_bid
+                    time.sleep(10)
+######
+                ### ロングクローズ
+                if (pos > 0 and counter > 120 and (round((lastPositionAsk - best_ask),2) > 0.01)):
+                    # ロングクローズ
+                    counrer = 0
 ###   
                     lot = self.lot
                     lot = self.calculate_lot(df_candleStick, self.margin, self.risk, entryTerm)
@@ -614,6 +658,47 @@ class ChannelBreakOut:
                     originalLot = self.lot
 ####
                     plRange = lastPositionAsk - best_ask
+                    pl.append(pl[-1] + plRange * lot)
+                    profitPos = pl[-1]
+                    logger.info("Long Close Profit=" + "{}".format(profitPos))
+                    okOrder = False
+                    print(datetime.datetime.now())
+                    print("market SELL(Long Close) order Lot=",lot)
+                    self.order.market(size=lot,side="SELL")
+                    okOrder = True
+                    pos -= 1
+                    mes = None
+                    if (profitPos>0.0): mes = " +Profit"
+                    else: mes = " -Loss"
+                    message = "bitFlyer_Bot(ETHBTC) Long Close Lot:{}, Price:{}, pl:{}, Result:{}".format(lot, best_bid, profitPos, mes)
+                    fileName = self.describePLForNotification(pl, df_candleStick)
+                    self.lineNotify(message,fileName)
+                    logger.info(message)
+                    #一定以上の値幅を取った場合，次の10トレードはロットを1/10に落とす．
+                    if plRange > waitTh:
+                        waitTerm = originalWaitTerm
+                        lot = round(originalLot/10,3)
+                    elif waitTerm > 0:
+                        waitTerm -= 1
+                        lot = round(originalLot/10,3)
+                    if waitTerm == 0:
+                        lot = originalLot
+                    lastSide = -1
+                    lastPositionAsk = best_ask
+                    lastPositionBid = best_bid
+                    time.sleep(10)
+                #### ショートクローズ
+                if (pos < 0 and counter > 120 and (round((lastPositionBid - best_bid),2) > 0.01)):
+                    # ショートクローズ
+                    counrer = 0
+###   
+                    lot = self.lot
+                    lot = self.calculate_lot(df_candleStick, self.margin, self.risk, entryTerm)
+                    if (lot < self.lot):
+                        lot = self.lot
+                    originalLot = self.lot
+####
+                    plRange = lastPositionBid - best_bid
                     pl.append(pl[-1] + plRange * lot)
                     profitPos = pl[-1]
                     okOrder = False
