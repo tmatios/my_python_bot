@@ -10,6 +10,7 @@ import requests
 import logging
 import csv
 import math
+from decimal import *
 import numpy as np
 import pandas as pd
 import matplotlib
@@ -56,13 +57,13 @@ class ChannelBreakOut:
         self._cost = 0.1
         self._risk = 0.3
         self.order = Order()
-        self.api = pybitflyer.API("Your API Key", "Your API Secret Key")
+        self.api = pybitflyer.API('Your API Key', 'Your API Secret Key')
         self.bitflyer = ccxt.bitflyer()
         self.bitflyer.apiKey = 'Your API Key'
         self.bitflyer.secret = 'Your API Secret Key'
 #
         #ラインに稼働状況を通知
-        self.line_notify_token = 'Your Line Notify Token'
+        self.line_notify_token = 'Line Notify Token'
         self.line_notify_api = 'https://notify-api.line.me/api/notify'
 
     @property
@@ -394,8 +395,20 @@ class ChannelBreakOut:
                 pass
 
     def my_round(self, x, d):
-        p = 10 ** d
-        return float(math.floor((x * p) + math.copysign(0.5, x)))/p
+        strtakeRange = str(x)
+        point = '.1'
+        if (d==2):
+            point = '.01'
+        elif (d==3):
+            point = '.001'
+        elif (d==4):
+            point = '.0001'
+        elif (d==5):
+            point = '.00001'
+        takeRange = Decimal(strtakeRange).quantize(Decimal(point), rounding=ROUND_UP)
+        if (d==3 and float(takeRange)>0.001):
+            print("TakeProfit=" + "{}".format(takeRange))
+        return float(takeRange)
 
     def describePLForNotification(self, pl, df_candleStick):
         #import matplotlib
@@ -517,7 +530,7 @@ class ChannelBreakOut:
                 if pos == 0 and not isRange[-1]:
                     #ロングエントリー
                     if judgement[0]:
-                        counrer = 0
+                        counter = 0
 ###   
                         lot = self.lot
                         lot = self.calculate_lot(df_candleStick, self.margin, self.risk, entryTerm)
@@ -545,7 +558,7 @@ class ChannelBreakOut:
                         time.sleep(10)
                     #ショートエントリー
                     elif judgement[1]:
-                        counrer = 0
+                        counter = 0
 ###   
                         lot = self.lot
                         lot = self.calculate_lot(df_candleStick, self.margin, self.risk, entryTerm)
@@ -572,7 +585,7 @@ class ChannelBreakOut:
                         time.sleep(10)
                 elif judgement[2] and pos > 0 and (self.my_round((lastPositionAsk - best_ask),3) > 0.001):
                     #ロングクローズ
-                    counrer = 0
+                    counter = 0
 ###   
                     lot = self.lot
                     lot = self.calculate_lot(df_candleStick, self.margin, self.risk, entryTerm)
@@ -612,7 +625,7 @@ class ChannelBreakOut:
                     time.sleep(10)
                 #ショートクローズ
                 if judgement[3] and pos < 0 and (self.my_round((lastPositionBid - best_bid),3) > 0.001) :
-                    counrer = 0
+                    counter = 0
 ###   
                     lot = self.lot
                     lot = self.calculate_lot(df_candleStick, self.margin, self.risk, entryTerm)
@@ -651,9 +664,9 @@ class ChannelBreakOut:
                     time.sleep(10)
 ######
                 ### ロングクローズ
-                if (pos > 0 and counter > 120 and (self.my_round((lastPositionAsk - best_ask),2) > 0.01)):
+                if (pos > 0 and counter > 120 and (self.my_round((lastPositionAsk - best_ask),3) > 0.005)):
                     # ロングクローズ
-                    counrer = 0
+                    counter = 0
 ###   
                     lot = self.lot
                     lot = self.calculate_lot(df_candleStick, self.margin, self.risk, entryTerm)
@@ -692,9 +705,9 @@ class ChannelBreakOut:
                     lastPositionBid = best_bid
                     time.sleep(10)
                 #### ショートクローズ
-                if (pos < 0 and counter > 120 and (self.my_round((lastPositionBid - best_bid),2) > 0.01)):
+                if (pos < 0 and counter > 120 and (self.my_round((lastPositionBid - best_bid),3) > 0.005)):
                     # ショートクローズ
-                    counrer = 0
+                    counter = 0
 ###   
                     lot = self.lot
                     lot = self.calculate_lot(df_candleStick, self.margin, self.risk, entryTerm)
@@ -744,8 +757,8 @@ class ChannelBreakOut:
 class Order:
     def __init__(self):
         self.product_code = "ETH_BTC"
-        self.key = "Your API Key"
-        self.secret = "Your API Secret Key"
+        self.key = 'Your API Key'
+        self.secret = 'Your API Secret Key'
         self.api = pybitflyer.API(self.key, self.secret)
 
     def market(self, side, size, minute_to_expire= None):
