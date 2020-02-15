@@ -59,11 +59,11 @@ class ChannelBreakOut:
         self.order = Order()
         self.api = pybitflyer.API('Your API Key', 'Your API Secret Key')
         self.bitflyer = ccxt.bitflyer()
-        self.bitflyer.apiKey = 'Your API Key'
+        self.bitflyer.apiKey = 'Your APi Key'
         self.bitflyer.secret = 'Your API Secret Key'
 #
         #ラインに稼働状況を通知
-        self.line_notify_token = 'Line Notify Token'
+        self.line_notify_token = 'Your Line Notify Token'
         self.line_notify_api = 'https://notify-api.line.me/api/notify'
 
     @property
@@ -395,7 +395,8 @@ class ChannelBreakOut:
                 pass
 
     def my_round(self, x, d):
-        strtakeRange = str(x)
+        strtakeRange = "{0:.7f}".format(x)
+        #strtakeRange = str(x)
         point = '.1'
         if (d==2):
             point = '.01'
@@ -406,9 +407,10 @@ class ChannelBreakOut:
         elif (d==5):
             point = '.00001'
         takeRange = Decimal(strtakeRange).quantize(Decimal(point), rounding=ROUND_UP)
-        if (d==3 and float(takeRange)>0.001):
-            print("TakeProfit=" + "{}".format(takeRange))
-        return float(takeRange)
+        ftakeRange = float(takeRange)
+        #if (d==4 and float(takeRange)>0.0001):
+        #print("TakeProfit=" + " input=" + "{}".format(strtakeRange) + " output=" + "{}".format(ftakeRange))
+        return ftakeRange
 
     def describePLForNotification(self, pl, df_candleStick):
         #import matplotlib
@@ -583,7 +585,7 @@ class ChannelBreakOut:
                         lastPositionAsk = best_ask
                         lastPositionBid = best_bid
                         time.sleep(10)
-                elif judgement[2] and pos > 0 and (self.my_round((lastPositionAsk - best_ask),3) > 0.001):
+                elif judgement[2] and pos > 0 and (self.my_round((lastPositionAsk - best_ask),4) > 0.0001):
                     #ロングクローズ
                     counter = 0
 ###   
@@ -624,7 +626,7 @@ class ChannelBreakOut:
                     lastPositionBid = best_bid
                     time.sleep(10)
                 #ショートクローズ
-                if judgement[3] and pos < 0 and (self.my_round((lastPositionBid - best_bid),3) > 0.001) :
+                if judgement[3] and pos < 0 and (self.my_round((lastPositionBid - best_bid),4) > 0.0001) :
                     counter = 0
 ###   
                     lot = self.lot
@@ -664,7 +666,7 @@ class ChannelBreakOut:
                     time.sleep(10)
 ######
                 ### ロングクローズ
-                if (pos > 0 and counter > 120 and (self.my_round((lastPositionAsk - best_ask),3) > 0.005)):
+                if (pos > 0 and counter > 120 and (self.my_round((lastPositionAsk - best_ask),4) > 0.0002)):
                     # ロングクローズ
                     counter = 0
 ###   
@@ -705,7 +707,7 @@ class ChannelBreakOut:
                     lastPositionBid = best_bid
                     time.sleep(10)
                 #### ショートクローズ
-                if (pos < 0 and counter > 120 and (self.my_round((lastPositionBid - best_bid),3) > 0.005)):
+                if (pos < 0 and counter > 120 and (self.my_round((lastPositionBid - best_bid),4) > 0.0002)):
                     # ショートクローズ
                     counter = 0
 ###   
