@@ -59,11 +59,11 @@ class ChannelBreakOut:
         self.order = Order()
         self.api = pybitflyer.API('Your API Key', 'Your API Secret Key')
         self.bitflyer = ccxt.bitflyer()
-        self.bitflyer.apiKey = 'Your APi Key'
+        self.bitflyer.apiKey = 'Your API Key'
         self.bitflyer.secret = 'Your API Secret Key'
 #
         #ラインに稼働状況を通知
-        self.line_notify_token = 'Your Line Notify Token'
+        self.line_notify_token = 'Line Notify Token'
         self.line_notify_api = 'https://notify-api.line.me/api/notify'
 
     @property
@@ -585,7 +585,7 @@ class ChannelBreakOut:
                         lastPositionAsk = best_ask
                         lastPositionBid = best_bid
                         time.sleep(10)
-                elif judgement[2] and pos > 0 and (self.my_round((lastPositionAsk - best_ask),4) > 0.0001):
+                elif judgement[2] and pos > 0 and (self.my_round((lastPositionAsk - best_ask),4) > 0.0000):
                     #ロングクローズ
                     counter = 0
 ###   
@@ -626,7 +626,7 @@ class ChannelBreakOut:
                     lastPositionBid = best_bid
                     time.sleep(10)
                 #ショートクローズ
-                if judgement[3] and pos < 0 and (self.my_round((lastPositionBid - best_bid),4) > 0.0001) :
+                if judgement[3] and pos < 0 and (self.my_round((lastPositionBid - best_bid),4) > 0.0000) :
                     counter = 0
 ###   
                     lot = self.lot
@@ -666,7 +666,7 @@ class ChannelBreakOut:
                     time.sleep(10)
 ######
                 ### ロングクローズ
-                if (pos > 0 and counter > 120 and (self.my_round((lastPositionAsk - best_ask),4) > 0.0002)):
+                if (pos > 0 and counter > 120 and (self.my_round((lastPositionAsk - best_ask),4) > 0.0001)):
                     # ロングクローズ
                     counter = 0
 ###   
@@ -707,7 +707,7 @@ class ChannelBreakOut:
                     lastPositionBid = best_bid
                     time.sleep(10)
                 #### ショートクローズ
-                if (pos < 0 and counter > 120 and (self.my_round((lastPositionBid - best_bid),4) > 0.0002)):
+                if (pos < 0 and counter > 120 and (self.my_round((lastPositionBid - best_bid),4) > 0.0001)):
                     # ショートクローズ
                     counter = 0
 ###   
