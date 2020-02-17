@@ -458,6 +458,7 @@ class ChannelBreakOut:
         closeLowLine = []
         closeHighLine = []
         profitPos = 0.0
+        getProfit = 0.0002
         okOrder = False
         pos = 0
         pl = []
@@ -483,6 +484,10 @@ class ChannelBreakOut:
                 print("Renewing candleSticks(" + str(counter) + ")")
                 recheck_flg = 1
                 counter += 1
+                if (counter > 120):
+                    getProfit = 0.0001
+                else:
+                    getProfit = 0.0002
                 try:
                     candleStick = self.getCandlestick(120, "60")
                 except:
@@ -543,8 +548,8 @@ class ChannelBreakOut:
                         plRange = lastPositionAsk - best_ask
                         profitPos = (plRange * lot)
                         if (profitPos > self.cost*self.lot*self.margin*10*10):
-                            logger.info("Long Entry Profit=" + "{:.5f}".format(profitPos))
-                        logger.info("Long Entry Position=" + "{:.5f}".format(profitPos))
+                            logger.info("Long Entry Profit=" + "{:.8f}".format(profitPos))
+                        logger.info("Long Entry Position=" + "{:.8f}".format(profitPos))
                         okOrder = False
                         print(datetime.datetime.now())
                         print("market BUY order Lot=",lot)
@@ -571,8 +576,8 @@ class ChannelBreakOut:
                         plRange = lastPositionBid - best_bid
                         profitPos = (plRange * lot)
                         if (profitPos > self.cost*self.lot*self.margin*10*10):
-                            logger.info("Short Entry Profit=" + "{:.5f}".format(profitPos))
-                        logger.info("Short Entry Position=" + "{:.5f}".format(profitPos))
+                            logger.info("Short Entry Profit=" + "{:.8f}".format(profitPos))
+                        logger.info("Short Entry Position=" + "{:.8f}".format(profitPos))
                         okOrder = False
                         print(datetime.datetime.now())
                         print("market SELL order Lot=",lot)
@@ -585,7 +590,7 @@ class ChannelBreakOut:
                         lastPositionAsk = best_ask
                         lastPositionBid = best_bid
                         time.sleep(10)
-                elif judgement[2] and pos > 0 and (self.my_round((lastPositionAsk - best_ask),4) > 0.0000):
+                elif judgement[2] and pos > 0 and (self.my_round((lastPositionAsk - best_ask),4) > getProfit):
                     #ロングクローズ
                     counter = 0
 ###   
@@ -598,7 +603,7 @@ class ChannelBreakOut:
                     plRange = lastPositionAsk - best_ask
                     pl.append(pl[-1] + plRange * lot)
                     profitPos = pl[-1]
-                    logger.info("Long Close Profit=" + "{:.5f}".format(profitPos))
+                    logger.info("Long Close Profit=" + "{:.8f}".format(profitPos))
                     okOrder = False
                     print(datetime.datetime.now())
                     print("market SELL(Long Close) order Lot=",lot)
@@ -608,7 +613,7 @@ class ChannelBreakOut:
                     mes = None
                     if (profitPos>0.0): mes = " +Profit"
                     else: mes = " -Loss"
-                    message = "bitFlyer_Bot(ETHBTC) Long Close Lot:{}, Price:{}, pl:{:.5f}, Result:{}".format(lot, best_bid, profitPos, mes)
+                    message = "bitFlyer_Bot(ETHBTC) Long Close Lot:{}, Price:{}, pl:{:.8f}, Result:{}".format(lot, best_bid, profitPos, mes)
                     fileName = self.describePLForNotification(pl, df_candleStick)
                     self.lineNotify(message,fileName)
                     logger.info(message)
@@ -626,7 +631,7 @@ class ChannelBreakOut:
                     lastPositionBid = best_bid
                     time.sleep(10)
                 #ショートクローズ
-                if judgement[3] and pos < 0 and (self.my_round((lastPositionBid - best_bid),4) > 0.0000) :
+                if judgement[3] and pos < 0 and (self.my_round((lastPositionBid - best_bid),4) > getProfit) :
                     counter = 0
 ###   
                     lot = self.lot
@@ -647,7 +652,7 @@ class ChannelBreakOut:
                     mes = None
                     if (profitPos>0.0): mes = " +Profit"
                     else: mes = " -Loss"
-                    message = "bitFlyer_Bot(ETHBTC) Short Close Lot:{}, Price:{}, pl:{:.5f}, Result:{}".format(lot, best_ask, profitPos, mes)
+                    message = "bitFlyer_Bot(ETHBTC) Short Close Lot:{}, Price:{}, pl:{:.8f}, Result:{}".format(lot, best_ask, profitPos, mes)
                     fileName = self.describePLForNotification(pl, df_candleStick)
                     self.lineNotify(message,fileName)
                     logger.info(message)
@@ -666,7 +671,7 @@ class ChannelBreakOut:
                     time.sleep(10)
 ######
                 ### ロングクローズ
-                if (pos > 0 and counter > 120 and (self.my_round((lastPositionAsk - best_ask),4) > 0.0001)):
+                if (pos > 0 and counter > 120 and (self.my_round((lastPositionAsk - best_ask),4) > getProfit)):
                     # ロングクローズ
                     counter = 0
 ###   
@@ -679,7 +684,7 @@ class ChannelBreakOut:
                     plRange = lastPositionAsk - best_ask
                     pl.append(pl[-1] + plRange * lot)
                     profitPos = pl[-1]
-                    logger.info("Long Close Profit=" + "{:.5f}".format(profitPos))
+                    logger.info("Long Close Profit=" + "{:.8f}".format(profitPos))
                     okOrder = False
                     print(datetime.datetime.now())
                     print("market SELL(Long Close) order Lot=",lot)
@@ -689,7 +694,7 @@ class ChannelBreakOut:
                     mes = None
                     if (profitPos>0.0): mes = " +Profit"
                     else: mes = " -Loss"
-                    message = "bitFlyer_Bot(ETHBTC) Long Close Lot:{}, Price:{}, pl:{:.5f}, Result:{}".format(lot, best_bid, profitPos, mes)
+                    message = "bitFlyer_Bot(ETHBTC) Long Close Lot:{}, Price:{}, pl:{:.8f}, Result:{}".format(lot, best_bid, profitPos, mes)
                     fileName = self.describePLForNotification(pl, df_candleStick)
                     self.lineNotify(message,fileName)
                     logger.info(message)
@@ -707,7 +712,7 @@ class ChannelBreakOut:
                     lastPositionBid = best_bid
                     time.sleep(10)
                 #### ショートクローズ
-                if (pos < 0 and counter > 120 and (self.my_round((lastPositionBid - best_bid),4) > 0.0001)):
+                if (pos < 0 and counter > 120 and (self.my_round((lastPositionBid - best_bid),4) > getProfit)):
                     # ショートクローズ
                     counter = 0
 ###   
@@ -729,7 +734,7 @@ class ChannelBreakOut:
                     mes = None
                     if (profitPos>0.0): mes = " +Profit"
                     else: mes = " -Loss"
-                    message = "bitFlyer_Bot(ETHBTC) Short Close Lot:{}, Price:{}, pl:{:.5f}, Result:{}".format(lot, best_ask, profitPos, mes)
+                    message = "bitFlyer_Bot(ETHBTC) Short Close Lot:{}, Price:{}, pl:{:.8f}, Result:{}".format(lot, best_ask, profitPos, mes)
                     fileName = self.describePLForNotification(pl, df_candleStick)
                     self.lineNotify(message,fileName)
                     logger.info(message)
