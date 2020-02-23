@@ -64,7 +64,7 @@ class ChannelBreakOut:
         self.bitflyer.secret = 'Your API Secret Key'
 #
         #ラインに稼働状況を通知
-        self.line_notify_token = 'Line Notify Token'
+        self.line_notify_token = 'Your Line Notify Token'
         self.line_notify_api = 'https://notify-api.line.me/api/notify'
 
     @property
@@ -553,7 +553,7 @@ class ChannelBreakOut:
                     pass
                 #ここからエントリー，クローズ処理
                 #if pos == 0 and not isRange[-1]:
-                if pos == 0 and not isRange[-1]:
+                if isRange[-1]:
                     #ロングエントリー
                     if judgement[0] and long_order_count < self.max_orders:
                         counter = 0
@@ -583,7 +583,7 @@ class ChannelBreakOut:
                             lastPositionBid = best_bid
                         time.sleep(10)
                     #ショートエントリー 
-                    if pos ==0 and judgement[1] and short_order_count < self.max_orders:
+                    if judgement[1] and short_order_count < self.max_orders:
                         counter = 0
                         short_order_count += 1
                         lot = self.calculate_lot(df_candleStick, self.margin, self.risk, entryTerm)
@@ -611,7 +611,7 @@ class ChannelBreakOut:
                             lastPositionBid = best_bid
                         time.sleep(10)
 #
-                elif not isRange[-1]:
+                if pos !=0 and isRange[-1]:
                     if judgement[2] and long_order_count > 0 and (self.my_round((lastPositionAsk - best_ask),4) > getProfit):
                         #ロングクローズ
                         counter = 0
