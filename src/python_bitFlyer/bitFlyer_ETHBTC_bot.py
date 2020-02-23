@@ -58,10 +58,10 @@ class ChannelBreakOut:
         self._risk = 0.3
         self._max_orders = 5 # Max=5
         self.order = Order()
-        self.api = pybitflyer.API('Your API Key', 'Your API Secret Key')
+        self.api = pybitflyer.API('My API Key', 'My API Secret Key')
         self.bitflyer = ccxt.bitflyer()
-        self.bitflyer.apiKey = 'Your API Key'
-        self.bitflyer.secret = 'Your API Secret Key'
+        self.bitflyer.apiKey = 'My API Key'
+        self.bitflyer.secret = 'My API Secret Key'
 #
         #ラインに稼働状況を通知
         self.line_notify_token = 'Your Line Notify Token'
@@ -583,7 +583,7 @@ class ChannelBreakOut:
                             lastPositionBid = best_bid
                         time.sleep(10)
                     #ショートエントリー 
-                    if judgement[1] and short_order_count < self.max_orders:
+                    if judgement[1] and short_order_count < self.max_orders and long_order_count != 0:
                         counter = 0
                         short_order_count += 1
                         lot = self.calculate_lot(df_candleStick, self.margin, self.risk, entryTerm)
@@ -741,8 +741,8 @@ class ChannelBreakOut:
 class Order:
     def __init__(self):
         self.product_code = "ETH_BTC"
-        self.key = 'Your API Key'
-        self.secret = 'Your API Secret Key'
+        self.key = 'My API Key'
+        self.secret = 'My API Secret Key'
         self.api = pybitflyer.API(self.key, self.secret)
 
     def market(self, side, size, minute_to_expire= None):
