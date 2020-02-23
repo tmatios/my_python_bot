@@ -583,7 +583,7 @@ class ChannelBreakOut:
                             lastPositionBid = best_bid
                         time.sleep(10)
                     #ショートエントリー 
-                    if judgement[1] and short_order_count < self.max_orders and long_order_count != 0:
+                    if judgement[1] and short_order_count < self.max_orders and long_order_count == 0:
                         counter = 0
                         short_order_count += 1
                         lot = self.calculate_lot(df_candleStick, self.margin, self.risk, entryTerm)
