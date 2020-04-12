@@ -64,7 +64,7 @@ class ChannelBreakOut:
         self.bitflyer.secret = 'Your API Secret Key'
 #
         #ラインに稼働状況を通知
-        self.line_notify_token = 'Line Notify Token'
+        self.line_notify_token = 'Your Lone Notify Token'
         self.line_notify_api = 'https://notify-api.line.me/api/notify'
 
     @property
@@ -356,6 +356,25 @@ class ChannelBreakOut:
             #    pass
         return ret_judgement
 
+    def judgeForLoop(self, high, low, entryHighLine, entryLowLine, closeHighLine, closeLowLine):
+        """
+        売り買い判断．入力した価格が期間高値より高ければ買いエントリー，期間安値を下抜けたら売りエントリー．judgementリストは[買いエントリー，売りエントリー，買いクローズ（売り），売りクローズ（買い）]のリストになっている．（値は0or1）
+        ローソク足は1分ごとに取得するのでインデックスが-1のもの（現在より1本前）をつかう．
+        """
+        judgement = [0,0,0,0]
+        #上抜けでエントリー
+        if high > entryHighLine[-1]:
+            judgement[0] = 1
+        #下抜けでエントリー
+        if low < entryLowLine[-1]:
+            judgement[1] = 1
+        #下抜けでクローズ
+        if low < closeLowLine[-1]:
+            judgement[2] = 1
+        #上抜けでクローズ
+        if high > closeHighLine[-1]:
+            judgement[3] = 1
+        return judgement
 
     def getCandlestick(self, number, period):
         """
@@ -489,8 +508,8 @@ class ChannelBreakOut:
         pos = 0
         pl = []
         pl.append(0)
-        lastPositionAsk = 000000.0000
-        lastPositionBid = 999999.9999
+        lastPositionAsk = 999999.9999
+        lastPositionBid = 0.0000
         counter = 0
         long_order_count = 0
         short_order_count = 0
@@ -506,7 +525,9 @@ class ChannelBreakOut:
             df_candleStick = self.fromListToDF(candleStick)
         else:
             df_candleStick = self.processCandleStick(candleStick, candleTerm)
-#
+        #entryLowLine, entryHighLine = self.calculateLines(df_candleStick,0)
+        #closeLowLine, closeHighLine = self.calculateLines(df_candleStick,1)
+        #lot = self.calculate_lot(df_candleStick, self.margin, entryTerm)
         while True:
             #5分ごとに基準ラインを更新
             if datetime.datetime.now().minute % 5 == 0 and recheck_flg == 0:
@@ -537,6 +558,16 @@ class ChannelBreakOut:
             if(recheck_flg==1):
                 entryLowLine, entryHighLine = self.calculateLines(df_candleStick, BarLineTerm,0)
                 closeLowLine, closeHighLine = self.calculateLines(df_candleStick, BarLineTerm,1)
+                #entryLowLine, entryHighLine = self.calculateLines(df_candleStick, 0)
+                #closeLowLine, closeHighLine = self.calculateLines(df_candleStick, 1)
+###                lot = self.calculateLot(self.margin)
+###                if (lot < self.lot):
+###                    lot = self.lot
+####
+                #直近約定件数30件の高値と安値
+                #high = max([candleStick[-1-i][4] for i in range(30)])
+                #low = min([candleStick[-1-i][4] for i in range(30)])
+                #judgement = self.judgeForLoop(high, low, entryHighLine, entryLowLine, closeHighLine, closeLowLine)
 #
                 judgement = self.judge(df_candleStick, entryHighLine, entryLowLine, closeHighLine, closeLowLine, entryTerm, closeTerm, BarLineTerm, pos)
 #
@@ -555,7 +586,12 @@ class ChannelBreakOut:
 #
                 #現在レンジ相場かどうか． 
                 isRange = self.isRange(df_candleStick, rangeTerm, rangeTh)
+                #if(judgement[0]): logger.info("********** Buy signal ******Range+pos:" + str(isRange[-1]) +"-pos-" + str(pos))
+                #if(judgement[1]): logger.info("********** Sell signal ******Range+pos:" + str(isRange[-1]) + "-pos-" + str(pos))
+                #if(judgement[2]): logger.info("********** Sell(Long Close) signal ******Range+pos:" + str(isRange[-1]) + "-pos-" + str(pos))
+                #if(judgement[3]): logger.info("********** Buy(Short Close) signal ******Range+pos:" + str(isRange[-1]) + "-pos-"+ str(pos))
                 try :
+                    ### print("get ticker!!!!!!!!!!!!!!!!!!!")
                     ticker = self.api.ticker(product_code=self.product_code)
                     best_ask = ticker["best_ask"]
                     best_bid = ticker["best_bid"]
@@ -569,7 +605,7 @@ class ChannelBreakOut:
                 #if pos == 0 and not isRange[-1]:
                 #if (isRange[-1]): 
                 #ショートエントリー 
-                if judgement[1] and short_order_count < self.max_orders and long_order_count == 0 and onLoop == True and isRange!=True:
+                if judgement[1] and short_order_count < self.max_orders and long_order_count == 0 and onLoop == True and isRange!=True and lastPositionBid <= best_bid:
                     counter = 0
                     short_order_count += 1
                     lot = self.calculate_lot(df_candleStick, self.margin, self.risk, entryTerm)
@@ -590,14 +626,14 @@ class ChannelBreakOut:
                     message = "Short entry Lot=" + "{:.4f}".format(lot) + "@price={}".format(best_bid)
                     self.lineNotify(message)
                     logger.info(message)
-                    if (lastPositionAsk < best_ask):
+                    if (lastPositionAsk < best_ask or lastPositionAsk == 999999.9999):
                         lastPositionAsk = best_ask
-                    if (lastPositionBid > best_bid):
+                    if (lastPositionBid > best_bid or lastPositionBid == 0.0000):
                         lastPositionBid = best_bid
                     onLoop = False
                     time.sleep(10)
                 #ロングエントリー
-                if judgement[0] and long_order_count < self.max_orders and short_order_count == 0 and isRange!=True:
+                if judgement[0] and long_order_count < self.max_orders and short_order_count == 0 and isRange!=True and lastPositionAsk >= best_ask:
                     counter = 0
                     long_order_count += 1
                     lot = self.calculate_lot(df_candleStick, self.margin, self.risk, entryTerm) 
@@ -618,9 +654,9 @@ class ChannelBreakOut:
                     message = "Long entry Lot=" + "{:.4f}".format(lot) + "@price={}".format(best_ask)
                     self.lineNotify(message)
                     logger.info(message)
-                    if (lastPositionAsk < best_ask):
+                    if (lastPositionAsk < best_ask or lastPositionAsk == 999999.9999):
                         lastPositionAsk = best_ask
-                    if (lastPositionBid > best_bid):
+                    if (lastPositionBid > best_bid or lastPositionBid == 0.0000):
                         lastPositionBid = best_bid
                     onLoop = False
                     time.sleep(10)
@@ -869,8 +905,7 @@ class ChannelBreakOut:
                 time.sleep(10)
 ######
                 ### クローズ(Timeout)
-            if (counter > 50 and onLoop == True):
-                # ロングクローズ
+            if (counter > 100 and onLoop == True):
                 counter = 0
                 okOrder = True
                 pos = 0
@@ -878,6 +913,8 @@ class ChannelBreakOut:
                 short_order_count = 0
                 long_order_lots = 0.0000
                 short_order_lots = 0.0000
+                lastPositionAsk = 999999.0000
+                lastPositionBid = 0.0000
                 mes = None
                 time.sleep(10)
 #####
