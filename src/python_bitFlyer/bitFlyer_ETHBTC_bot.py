@@ -58,13 +58,13 @@ class ChannelBreakOut:
         self._risk = 0.3
         self._max_orders = 5 # Max=5
         self.order = Order()
-        self.api = pybitflyer.API('Your API Key', 'Your API Secret Key')
+        self.api = pybitflyer.API('Your API Key Secret', 'Your API Key')
         self.bitflyer = ccxt.bitflyer()
         self.bitflyer.apiKey = 'Your API Key'
-        self.bitflyer.secret = 'Your API Secret Key'
+        self.bitflyer.secret = 'Your API Key Secret'
 #
         #ラインに稼働状況を通知
-        self.line_notify_token = 'Your Lone Notify Token'
+        self.line_notify_token = 'Your Line Notify Token'
         self.line_notify_api = 'https://notify-api.line.me/api/notify'
 
     @property
@@ -535,11 +535,11 @@ class ChannelBreakOut:
                 recheck_flg = 1
                 counter += 1
 #
-                getProfit = 0.0004
+                getProfit = 0.0005
                 if (counter > 20):
-                    getProfit = 0.0003
+                    getProfit = 0.0004
                 elif (counter > 30):
-                    getProfit = 0.0002
+                    getProfit = 0.0003
 #
                 try:
                     candleStick = self.getCandlestick(120, "60")
@@ -570,19 +570,6 @@ class ChannelBreakOut:
                 #judgement = self.judgeForLoop(high, low, entryHighLine, entryLowLine, closeHighLine, closeLowLine)
 #
                 judgement = self.judge(df_candleStick, entryHighLine, entryLowLine, closeHighLine, closeLowLine, entryTerm, closeTerm, BarLineTerm, pos)
-#
-                if (judgement[2] and pos > 0): #Long Position
-                    if (counter > 12):
-                        getProfit = 0.0001
-                    else:
-                        getProfit = 0.0002
-                elif (judgement[3] and pos < 0):    #Short Position
-                    if (counter > 12):
-                        getProfit = 0.0001
-                    else:
-                        getProfit = 0.0002
-                if (counter > 30):
-                    getProfit = 0.0000
 #
                 #現在レンジ相場かどうか． 
                 isRange = self.isRange(df_candleStick, rangeTerm, rangeTh)
@@ -626,14 +613,12 @@ class ChannelBreakOut:
                     message = "Short entry Lot=" + "{:.4f}".format(lot) + "@price={}".format(best_bid)
                     self.lineNotify(message)
                     logger.info(message)
-                    if (lastPositionAsk < best_ask or lastPositionAsk == 999999.9999):
-                        lastPositionAsk = best_ask
-                    if (lastPositionBid > best_bid or lastPositionBid == 0.0000):
-                        lastPositionBid = best_bid
+                    lastPositionAsk = best_ask
+                    lastPositionBid = best_bid
                     onLoop = False
                     time.sleep(10)
                 #ロングエントリー
-                if judgement[0] and long_order_count < self.max_orders and short_order_count == 0 and isRange!=True and lastPositionAsk >= best_ask:
+                if judgement[0] and long_order_count < self.max_orders and short_order_count == 0 and onLoop == True and isRange!=True and lastPositionAsk >= best_ask:
                     counter = 0
                     long_order_count += 1
                     lot = self.calculate_lot(df_candleStick, self.margin, self.risk, entryTerm) 
@@ -654,73 +639,70 @@ class ChannelBreakOut:
                     message = "Long entry Lot=" + "{:.4f}".format(lot) + "@price={}".format(best_ask)
                     self.lineNotify(message)
                     logger.info(message)
-                    if (lastPositionAsk < best_ask or lastPositionAsk == 999999.9999):
-                        lastPositionAsk = best_ask
-                    if (lastPositionBid > best_bid or lastPositionBid == 0.0000):
-                        lastPositionBid = best_bid
+                    lastPositionAsk = best_ask
+                    lastPositionBid = best_bid
                     onLoop = False
                     time.sleep(10)
 #
-                if pos !=0:  # and isRange[-1]:
-                    if judgement[2] and long_order_count > 0 and onLoop == True and self.my_round((best_ask - lastPositionAsk),4) >0.0000:
-                        #ロングクローズ
-                        counter = 0
-                        plRange = best_ask - lastPositionAsk
-                        pl.append(pl[-1] + plRange * lot)
-                        profitPos = pl[-1]*10*10*10
-                        logger.info("Long Close Profit=" + "{:.8f}".format(profitPos))
-                        okOrder = False
-                        print(datetime.datetime.now())
-                        print("market SELL(Long Close) order Lot=",long_order_lots)
-                        self.order.market(size=long_order_lots,side="SELL")
-                        okOrder = True
-                        pos = 0
-                        long_order_count = 0
-                        mes = None
-                        if (profitPos>0.0): mes = " +Profit"
-                        else: mes = " -Loss"
-                        message = "bitFlyer_Bot(ETHBTC) Long Close Lot:{:.4f}, Price:{}, pl:{:.8f}, Result:{}".format(long_order_lots, best_ask, profitPos, mes)
-                        ### comment because od file sizr bigger fileName = self.describePLForNotification(pl, df_candleStick)
-                        ### comment because od file sizr bigger self.lineNotify(message,fileName)
-                        self.lineNotify(message)
-                        logger.info(message)
-                        long_order_lots = 0.0000
-                        lastSide = -1
-                        if (lastPositionAsk < best_ask):
-                            lastPositionAsk = best_ask
-                        if (lastPositionBid > best_bid):
-                            lastPositionBid = best_bid
-                        onLoop = False
-                        time.sleep(10)
+                if judgement[2] and long_order_count > 0 and onLoop == True and self.my_round((best_ask - lastPositionAsk),4) >0.0000:
+                    #ロングクローズ
+                    counter = 0
+                    plRange = best_ask - lastPositionAsk
+                    pl.append(pl[-1] + plRange * lot)
+                    profitPos = pl[-1]*10*10*10
+                    logger.info("Long Close Profit=" + "{:.8f}".format(profitPos))
+                    okOrder = False
+                    print(datetime.datetime.now())
+                    print("market SELL(Long Close) order Lot=",long_order_lots)
+                    self.order.market(size=long_order_lots,side="SELL")
+                    okOrder = True
+                    pos = 0
+                    long_order_count = 0
+                    mes = None
+                    if (profitPos>0.0): mes = " +Profit"
+                    else: mes = " -Loss"
+                    message = "bitFlyer_Bot(ETHBTC) Long Close Lot:{:.4f}, Price:{}, pl:{:.8f}, Result:{}".format(long_order_lots, best_ask, profitPos, mes)
+                    ### comment because od file sizr bigger fileName = self.describePLForNotification(pl, df_candleStick)
+                    ### comment because od file sizr bigger self.lineNotify(message,fileName)
+                    self.lineNotify(message)
+                    logger.info(message)
+                    long_order_lots = 0.0000
+                    lastSide = -1
+                    if (lastPositionAsk < best_ask):
+                        lastPositionAsk = best_ask
+                    if (lastPositionBid > best_bid):
+                        lastPositionBid = best_bid
+                    onLoop = False
+                    time.sleep(10)
+                if judgement[3] and short_order_count > 0 and onLoop == True and self.my_round((lastPositionBid - best_bid),4)>0.0000:
                     #ショートクローズ
-                    if judgement[3] and short_order_count > 0 and onLoop == True and self.my_round((lastPositionBid - best_bid),4)>0.0000:
-                        counter = 0
-                        plRange = lastPositionBid - best_bid
-                        pl.append(pl[-1] + plRange * lot)
-                        profitPos = pl[-1]*10*10*10
-                        okOrder = False
-                        print(datetime.datetime.now())
-                        print("market BUY(Short Close) order Lot=",short_order_lots)
-                        self.order.market(size=short_order_lots, side="BUY")
-                        okOrder = True
-                        pos = 0
-                        short_order_count = 0
-                        mes = None
-                        if (profitPos>0.0): mes = " +Profit"
-                        else: mes = " -Loss"
-                        message = "bitFlyer_Bot(ETHBTC) Short Close Lot:{:.4f}, Price:{}, pl:{:.8f}, Result:{}".format(short_order_lots, best_bid, profitPos, mes)
-                        ### comment because od file sizr bigger fileName = self.describePLForNotification(pl, df_candleStick)
-                        ### comment because od file sizr bigger self.lineNotify(message,fileName)
-                        logger.info(message)
-                        self.lineNotify(message)
-                        short_order_lots = 0.0000
-                        lastSide = 1
-                        if (lastPositionAsk < best_ask):
-                            lastPositionAsk = best_ask
-                        if (lastPositionBid > best_bid):
-                            lastPositionBid = best_bid
-                        onLoop = False
-                        time.sleep(10)
+                    counter = 0
+                    plRange = lastPositionBid - best_bid
+                    pl.append(pl[-1] + plRange * lot)
+                    profitPos = pl[-1]*10*10*10
+                    okOrder = False
+                    print(datetime.datetime.now())
+                    print("market BUY(Short Close) order Lot=",short_order_lots)
+                    self.order.market(size=short_order_lots, side="BUY")
+                    okOrder = True
+                    pos = 0
+                    short_order_count = 0
+                    mes = None
+                    if (profitPos>0.0): mes = " +Profit"
+                    else: mes = " -Loss"
+                    message = "bitFlyer_Bot(ETHBTC) Short Close Lot:{:.4f}, Price:{}, pl:{:.8f}, Result:{}".format(short_order_lots, best_bid, profitPos, mes)
+                    ### comment because od file sizr bigger fileName = self.describePLForNotification(pl, df_candleStick)
+                    ### comment because od file sizr bigger self.lineNotify(message,fileName)
+                    logger.info(message)
+                    self.lineNotify(message)
+                    short_order_lots = 0.0000
+                    lastSide = 1
+                    if (lastPositionAsk < best_ask):
+                        lastPositionAsk = best_ask
+                    if (lastPositionBid > best_bid):
+                        lastPositionBid = best_bid
+                    onLoop = False
+                    time.sleep(10)
 ######
                 ### ロングクローズ()
             if (long_order_count > 0 and counter > 60 and self.my_round((best_bid - lastPositionAsk),4) > getProfit and onLoop == True):
@@ -794,7 +776,7 @@ class ChannelBreakOut:
                 self.order.market(size=long_order_lots,side="SELL")
                 okOrder = True
                 pos = 0
-                long_order_count = 0
+                #long_order_count = 0
                 short_order_count = 0
                 mes = None
                 if (profitPos>0.0): mes = " +Profit"
@@ -804,7 +786,7 @@ class ChannelBreakOut:
                 ### comment because od file sizr bigger self.lineNotify(message,fileName)
                 self.lineNotify(message)
                 logger.info(message)
-                long_order_lots = 0.0000
+                #long_order_lots = 0.0000
                 short_order_lots = 0.0000
                 lastSide = 0
                 lastPositionAsk = best_ask
@@ -824,7 +806,7 @@ class ChannelBreakOut:
                 self.order.market(size=short_order_lots, side="BUY")
                 okOrder = True
                 pos = 0
-                short_order_count = 0
+                #short_order_count = 0
                 long_order_count = 0
                 mes = None
                 if (profitPos>0.0): mes = " +Profit"
@@ -834,7 +816,7 @@ class ChannelBreakOut:
                 ### comment because od file sizr bigger self.lineNotify(message,fileName)
                 self.lineNotify(message)
                 logger.info(message)
-                short_order_lots = 0.0000
+                #short_order_lots = 0.0000
                 long_order_lots = 0.0000
                 lastSide = 0
                 lastPositionAsk = best_ask
@@ -856,7 +838,7 @@ class ChannelBreakOut:
                 self.order.market(size=long_order_lots,side="SELL")
                 okOrder = True
                 pos = 0
-                long_order_count = 0
+                #long_order_count = 0
                 short_order_count = 0
                 mes = None
                 if (profitPos>0.0): mes = " +Profit"
@@ -866,7 +848,7 @@ class ChannelBreakOut:
                 ### comment because od file sizr bigger self.lineNotify(message,fileName)
                 self.lineNotify(message)
                 logger.info(message)
-                long_order_lots = 0.0000
+                #long_order_lots = 0.0000
                 short_order_lots = 0.0000
                 lastSide = 0
                 lastPositionAsk = best_ask
@@ -886,7 +868,7 @@ class ChannelBreakOut:
                 self.order.market(size=short_order_lots, side="BUY")
                 okOrder = True
                 pos = 0
-                short_order_count = 0
+                #short_order_count = 0
                 long_order_count = 0
                 mes = None
                 if (profitPos>0.0): mes = " +Profit"
@@ -896,7 +878,7 @@ class ChannelBreakOut:
                 ### comment because od file sizr bigger self.lineNotify(message,fileName)
                 self.lineNotify(message)
                 logger.info(message)
-                short_order_lots = 0.0000
+                #short_order_lots = 0.0000
                 long_order_lots = 0.0000
                 lastSide = 0
                 lastPositionAsk = best_ask
@@ -932,7 +914,7 @@ class Order:
     def __init__(self):
         self.product_code = "ETH_BTC"
         self.key = 'Your API Key'
-        self.secret = 'Your API Secret Key'
+        self.secret = 'Your API Key Secret'
         self.api = pybitflyer.API(self.key, self.secret)
 
     def market(self, side, size, minute_to_expire= None):
