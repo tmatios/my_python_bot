@@ -58,13 +58,13 @@ class ChannelBreakOut:
         self._risk = 0.3
         self._max_orders = 5 # Max=5
         self.order = Order()
-        self.api = pybitflyer.API('Your API Key Secret', 'Your API Key')
+        self.api = pybitflyer.API('Your API Key', 'Your API Sectet Key')
         self.bitflyer = ccxt.bitflyer()
         self.bitflyer.apiKey = 'Your API Key'
-        self.bitflyer.secret = 'Your API Key Secret'
+        self.bitflyer.secret = 'Your API Sectet Key'
 #
         #ラインに稼働状況を通知
-        self.line_notify_token = 'Your Line Notify Token'
+        self.line_notify_token = 'Youe Line Notify Token'
         self.line_notify_api = 'https://notify-api.line.me/api/notify'
 
     @property
@@ -613,8 +613,10 @@ class ChannelBreakOut:
                     message = "Short entry Lot=" + "{:.4f}".format(lot) + "@price={}".format(best_bid)
                     self.lineNotify(message)
                     logger.info(message)
-                    lastPositionAsk = best_ask
-                    lastPositionBid = best_bid
+                    if (lastPositionAsk == 999999.9999 or lastPositionAsk > best_ask):
+                        lastPositionAsk = best_ask
+                    if (lastPositionBid == 0.0000 or lastPositionBid < best_bid):
+                        lastPositionBid = best_bid
                     onLoop = False
                     time.sleep(10)
                 #ロングエントリー
@@ -639,8 +641,10 @@ class ChannelBreakOut:
                     message = "Long entry Lot=" + "{:.4f}".format(lot) + "@price={}".format(best_ask)
                     self.lineNotify(message)
                     logger.info(message)
-                    lastPositionAsk = best_ask
-                    lastPositionBid = best_bid
+                    if (lastPositionAsk == 999999.9999 or lastPositionAsk > best_ask):
+                        lastPositionAsk = best_ask
+                    if (lastPositionBid == 0.0000 or lastPositionBid < best_bid):
+                        lastPositionBid = best_bid
                     onLoop = False
                     time.sleep(10)
 #
@@ -914,7 +918,7 @@ class Order:
     def __init__(self):
         self.product_code = "ETH_BTC"
         self.key = 'Your API Key'
-        self.secret = 'Your API Key Secret'
+        self.secret = 'Your API Sectet Key'
         self.api = pybitflyer.API(self.key, self.secret)
 
     def market(self, side, size, minute_to_expire= None):
