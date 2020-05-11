@@ -592,7 +592,7 @@ class ChannelBreakOut:
                 #if pos == 0 and not isRange[-1]:
                 #if (isRange[-1]): 
                 #ショートエントリー 
-                if judgement[1] and short_order_count < self.max_orders and long_order_count == 0 and onLoop == True and isRange!=True and lastPositionBid <= best_bid:
+                if judgement[1] and short_order_count < self.max_orders and onLoop == True and isRange!=True and lastPositionBid <= best_bid:
                     counter = 0
                     short_order_count += 1
                     lot = self.calculate_lot(df_candleStick, self.margin, self.risk, entryTerm)
@@ -620,7 +620,7 @@ class ChannelBreakOut:
                     onLoop = False
                     time.sleep(10)
                 #ロングエントリー
-                if judgement[0] and long_order_count < self.max_orders and short_order_count == 0 and onLoop == True and isRange!=True and lastPositionAsk >= best_ask:
+                if judgement[0] and long_order_count < self.max_orders and onLoop == True and isRange!=True and lastPositionAsk >= best_ask:
                     counter = 0
                     long_order_count += 1
                     lot = self.calculate_lot(df_candleStick, self.margin, self.risk, entryTerm) 
