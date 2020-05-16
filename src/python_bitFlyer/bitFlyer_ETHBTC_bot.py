@@ -293,7 +293,7 @@ class ChannelBreakOut:
         return isRange
 
     #def judge(self, df_candleStick, entryHighLine, entryLowLine, closeHighLine, closeLowLine, entryTerm):
-    def judge(self, df_candleStick, entryHighLine, entryLowLine, closeHighLine, closeLowLine, entryTerm, closeTerm, BarLineTerm, pos):
+    def judge(self, df_candleStick, entryHighLine, entryLowLine, closeHighLine, closeLowLine, entryTerm, closeTerm, BarLineTerm):
         """
         売り買い判断．ローソク足の高値が期間高値を上抜けたら買いエントリー．（2）ローソク足の安値が期間安値を下抜けたら売りエントリー．judgementリストは[買いエントリー，売りエントリー，買いクローズ（売り），売りクローズ（買い）]のリストになっている．（二次元リスト）リスト内リストはの要素は，0（シグナルなし）,価格（シグナル点灯）を取る．
         """
@@ -304,53 +304,51 @@ class ChannelBreakOut:
         ci = 0
         di = 0
         for i in range(len(df_candleStick.index)):
-            if pos == 0:
-                #下抜けでエントリー
-                if df_candleStick["low"][i] < entryLowLine[i] and i >= entryTerm:
-                    judgement[i][0] = entryLowLine[i]
+            #下抜けでエントリー
+            if df_candleStick["low"][i] < entryLowLine[i] and i >= entryTerm:
+                judgement[i][0] = entryLowLine[i]
+                ai = i
+            elif df_candleStick["low"][i] >= entryLowLine[i] and i >= entryTerm:
+                if judgement[ai][0] == 0:
+                    judgement[ai][0] = entryLowLine[i]
                     ai = i
-                elif df_candleStick["low"][i] >= entryLowLine[i] and i >= entryTerm:
-                    if judgement[ai][0] == 0:
-                        judgement[ai][0] = entryLowLine[i]
-                        ai = i
-                    elif judgement[ai][0] >= entryLowLine[i] and ai < i:
-                        ret_judgement[0] = 1
-                        break
-                #上抜けでエントリー
-                if df_candleStick["high"][i] > entryHighLine[i] and i >= entryTerm:
-                    judgement[i][1] = entryHighLine[i]
+                elif judgement[ai][0] >= entryLowLine[i] and ai < i:
+                    ret_judgement[0] = 1
+                    break
+            #上抜けでエントリー
+            if df_candleStick["high"][i] > entryHighLine[i] and i >= entryTerm:
+                judgement[i][1] = entryHighLine[i]
+                bi = i
+            elif df_candleStick["high"][i] < entryHighLine[i] and i >= entryTerm:
+                if judgement[bi][1] == 0:
+                    judgement[bi][1] = entryHighLine[i]
                     bi = i
-                elif df_candleStick["high"][i] < entryHighLine[i] and i >= entryTerm:
-                    if judgement[bi][1] == 0:
-                        judgement[bi][1] = entryHighLine[i]
-                        bi = i
-                    elif judgement[bi][1] <= entryHighLine[i] and bi < i:
-                        ret_judgement[1] = 1
-                        break
+                elif judgement[bi][1] <= entryHighLine[i] and bi < i:
+                    ret_judgement[1] = 1
+                    break
 #
            #上抜けでクローズ
-            else:
-                if df_candleStick["high"][i] > closeHighLine[i] and i >= closeTerm:
-                    judgement[i][2] = closeHighLine[i]  
+            if df_candleStick["high"][i] > closeHighLine[i] and i >= closeTerm:
+                judgement[i][2] = closeHighLine[i]  
+                ci = i
+            elif df_candleStick["high"][i] < closeHighLine[i] and i >= closeTerm:
+                if judgement[ci][2] == 0:
+                    judgement[ci][1] = closeHighLine[i]
                     ci = i
-                elif df_candleStick["high"][i] < closeHighLine[i] and i >= closeTerm and pos > 0:
-                    if judgement[ci][2] == 0:
-                        judgement[ci][1] = closeHighLine[i]
-                        ci = i
-                    elif judgement[ci][2] <= closeHighLine[i] and ci < i:
-                        ret_judgement[2] = 1
-                        break
-                #下抜けでクローズ
-                if df_candleStick["low"][i] < closeLowLine[i] and i >= closeTerm and pos < 0:
-                    judgement[i][3] = closeLowLine[i]
+                elif judgement[ci][2] <= closeHighLine[i] and ci < i:
+                    ret_judgement[2] = 1
+                    break
+            #下抜けでクローズ
+            if df_candleStick["low"][i] < closeLowLine[i] and i >= closeTerm:
+                judgement[i][3] = closeLowLine[i]
+                di = i
+            elif df_candleStick["low"][i] > closeLowLine[i] and i >= closeTerm:
+                if judgement[di][3] == 0:
+                    judgement[di][3] = closeLowLine[i]
                     di = i
-                elif df_candleStick["low"][i] > closeLowLine[i] and i >= closeTerm and pos < 0:
-                    if judgement[di][3] == 0:
-                        judgement[di][3] = closeLowLine[i]
-                        di = i
-                    elif judgement[di][3] >= closeLowLine[i] and di < i:
-                        ret_judgement[3] = 1
-                        break
+                elif judgement[di][3] >= closeLowLine[i] and di < i:
+                    ret_judgement[3] = 1
+                    break
 #
             #else:
             #    pass
@@ -569,7 +567,7 @@ class ChannelBreakOut:
                 #low = min([candleStick[-1-i][4] for i in range(30)])
                 #judgement = self.judgeForLoop(high, low, entryHighLine, entryLowLine, closeHighLine, closeLowLine)
 #
-                judgement = self.judge(df_candleStick, entryHighLine, entryLowLine, closeHighLine, closeLowLine, entryTerm, closeTerm, BarLineTerm, pos)
+                judgement = self.judge(df_candleStick, entryHighLine, entryLowLine, closeHighLine, closeLowLine, entryTerm, closeTerm, BarLineTerm)
 #
                 #現在レンジ相場かどうか． 
                 isRange = self.isRange(df_candleStick, rangeTerm, rangeTh)
@@ -591,8 +589,15 @@ class ChannelBreakOut:
                 onLoop = True
                 #if pos == 0 and not isRange[-1]:
                 #if (isRange[-1]): 
+                print("judgement[0]:Buy Entry= ",judgement[0])
+                print("judgement[1]:Sell Entry= ",judgement[1])
+                print("judgement[2]:Buy Close(Sell)= ",judgement[2])
+                print("judgement[3]:Sell Close(Buy)= ",judgement[3])
+                print("isRange[-1]= ",isRange[-1])
+                print("long_order_count= ",long_order_count)
+                print("short_order_count= ",short_order_count)
                 #ショートエントリー 
-                if judgement[1] and short_order_count < self.max_orders and onLoop == True and isRange!=True:
+                if judgement[1] and short_order_count < self.max_orders and onLoop == True and isRange[-1]!=True:
                     counter = 0
                     short_order_count += 1
                     lot = self.calculate_lot(df_candleStick, self.margin, self.risk, entryTerm)
@@ -620,7 +625,7 @@ class ChannelBreakOut:
                     onLoop = False
                     time.sleep(10)
                 #ロングエントリー
-                if judgement[0] and long_order_count < self.max_orders and onLoop == True and isRange!=True:
+                if judgement[0] and long_order_count < self.max_orders and onLoop == True and isRange[-1]!=True:
                     counter = 0
                     long_order_count += 1
                     lot = self.calculate_lot(df_candleStick, self.margin, self.risk, entryTerm) 
