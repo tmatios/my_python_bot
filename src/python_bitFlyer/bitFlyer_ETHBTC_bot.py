@@ -533,9 +533,9 @@ class ChannelBreakOut:
                 recheck_flg = 1
                 counter += 1
 #
-                getProfit = 0.0005
+                getProfit = 0.0003
                 if (counter > 20):
-                    getProfit = 0.0003
+                    getProfit = 0.0002
                 elif (counter > 30):
                     getProfit = 0.0001
 #
@@ -597,7 +597,7 @@ class ChannelBreakOut:
                 print("long_order_count= ",long_order_count)
                 print("short_order_count= ",short_order_count)
                 #ショートエントリー 
-                if judgement[1] and short_order_count < self.max_orders and onLoop == True and isRange[-1]!=True:
+                if judgement[1] and short_order_count < self.max_orders and onLoop == True and isRange[-1]!=True and (lastPositionBid == 0.0000 or lastPositionBid <= best_bid):
                     counter = 0
                     short_order_count += 1
                     lot = self.calculate_lot(df_candleStick, self.margin, self.risk, entryTerm)
@@ -625,7 +625,7 @@ class ChannelBreakOut:
                     onLoop = False
                     time.sleep(10)
                 #ロングエントリー
-                if judgement[0] and long_order_count < self.max_orders and onLoop == True and isRange[-1]!=True:
+                if judgement[0] and long_order_count < self.max_orders and onLoop == True and isRange[-1]!=True and (lastPositionAsk == 999999.9999 or lastPositionAsk >= best_ask):
                     counter = 0
                     long_order_count += 1
                     lot = self.calculate_lot(df_candleStick, self.margin, self.risk, entryTerm) 
