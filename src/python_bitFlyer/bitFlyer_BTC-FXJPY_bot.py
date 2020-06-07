@@ -822,7 +822,7 @@ class Order:
 if __name__ == '__main__':
     #とりあえず5分足，5期間安値・高値でエントリー，クローズする設定
     channelBreakOut = ChannelBreakOut()
-    channelBreakOut.entryTerm = 12
+    channelBreakOut.entryTerm = 15
     channelBreakOut.closeTerm = 12
     channelBreakOut.rangeTh = None
     channelBreakOut.rangeTerm = 12 
@@ -830,7 +830,7 @@ if __name__ == '__main__':
     channelBreakOut.waitTh = 500
     channelBreakOut.candleTerm = "5T"
     channelBreakOut.cost = 0.01
-    channelBreakOut.risk = 0.3
+    channelBreakOut.risk = 0.1
     channelBreakOut.max_orders = 5
     channelBreakOut.margin = 4
 
