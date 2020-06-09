@@ -316,7 +316,7 @@ class ChannelBreakOut:
                     ai = i
                 elif judgement[ai][0] >= entryLowLine[i] and ai < i:
                     ret_judgement[0] = 1
-                    break
+                    #break
             #上抜けでエントリー
             if df_candleStick["high"][i] > entryHighLine[i] and i >= entryTerm:
                 judgement[i][1] = entryHighLine[i]
@@ -327,7 +327,7 @@ class ChannelBreakOut:
                     bi = i
                 elif judgement[bi][1] <= entryHighLine[i] and bi < i:
                     ret_judgement[1] = 1
-                    break
+                    #break
 #
            #上抜けでクローズ
             if df_candleStick["high"][i] > closeHighLine[i] and i >= closeTerm:
@@ -339,7 +339,7 @@ class ChannelBreakOut:
                     ci = i
                 elif judgement[ci][2] <= closeHighLine[i] and ci < i:
                     ret_judgement[2] = 1
-                    break
+                    #break
             #下抜けでクローズ
             if df_candleStick["low"][i] < closeLowLine[i] and i >= closeTerm:
                 judgement[i][3] = closeLowLine[i]
@@ -350,7 +350,7 @@ class ChannelBreakOut:
                     di = i
                 elif judgement[di][3] >= closeLowLine[i] and di < i:
                     ret_judgement[3] = 1
-                    break
+                    #break
 #
             #else:
             #    pass
@@ -535,11 +535,11 @@ class ChannelBreakOut:
                 recheck_flg = 1
                 counter += 1
 #
-                getProfit = 30000
+                getProfit =20000
                 if (counter > 20):
-                    getProfit = 20000
-                elif (counter > 30):
                     getProfit = 10000
+                elif (counter > 30):
+                    getProfit = 500
 #
                 try:
                     candleStick = self.getCandlestick(120, "60")
@@ -666,7 +666,7 @@ class ChannelBreakOut:
                     mes = None
                     if (profitPos>0): mes = " +Profit"
                     else: mes = " -Loss"
-                    message = "bitFlyer_Bot(ETHBTC) Long Close Lot:{:.2f}, Price:{}, pl:{:.d}, Result:{}".format(long_order_lots, best_ask, profitPos, mes)
+                    message = "bitFlyer_Bot(ETHBTC) Long Close Lot:{}, Price:{}, pl:{}, Result:{}".format(long_order_lots, best_ask, profitPos, mes)
                     ### comment because od file sizr bigger fileName = self.describePLForNotification(pl, df_candleStick)
                     ### comment because od file sizr bigger self.lineNotify(message,fileName)
                     self.lineNotify(message)
@@ -695,7 +695,7 @@ class ChannelBreakOut:
                     mes = None
                     if (profitPos>0): mes = " +Profit"
                     else: mes = " -Loss"
-                    message = "bitFlyer_Bot(ETHBTC) Short Close Lot:{:.2f}, Price:{}, pl:{:.d}, Result:{}".format(short_order_lots, best_bid, profitPos, mes)
+                    message = "bitFlyer_Bot(ETHBTC) Short Close Lot:{}, Price:{}, pl:{}, Result:{}".format(short_order_lots, best_bid, profitPos, mes)
                     ### comment because od file sizr bigger fileName = self.describePLForNotification(pl, df_candleStick)
                     ### comment because od file sizr bigger self.lineNotify(message,fileName)
                     logger.info(message)
@@ -726,7 +726,7 @@ class ChannelBreakOut:
                     mes = None
                     if (profitPos>0): mes = " +Profit"
                     else: mes = " -Loss"
-                    message = "bitFlyer_Bot(ETHBTC) Long Close Lot:{:.2f}, Price:{}, pl:{:.d}, Result:{}".format(long_order_lots, best_ask, profitPos, mes)
+                    message = "bitFlyer_Bot(ETHBTC) Long Close Lot:{}, Price:{}, pl:{}, Result:{}".format(long_order_lots, best_ask, profitPos, mes)
                     ### comment because od file sizr bigger fileName = self.describePLForNotification(pl, df_candleStick)
                     ### comment because od file sizr bigger self.lineNotify(message,fileName)
                     self.lineNotify(message)
@@ -754,7 +754,7 @@ class ChannelBreakOut:
                     mes = None
                     if (profitPos>0): mes = " +Profit"
                     else: mes = " -Loss"
-                    message = "bitFlyer_Bot(ETHBTC) Short Close Lot:{:.2f}, Price:{}, pl:{:.d}, Result:{}".format(short_order_lots, best_bid, profitPos, mes)
+                    message = "bitFlyer_Bot(ETHBTC) Short Close Lot:{}, Price:{}, pl:{}, Result:{}".format(short_order_lots, best_bid, profitPos, mes)
                     ### comment because od file sizr bigger fileName = self.describePLForNotification(pl, df_candleStick)
                     ### comment because od file sizr bigger self.lineNotify(message,fileName)
                     self.lineNotify(message)
@@ -822,15 +822,15 @@ class Order:
 if __name__ == '__main__':
     #とりあえず5分足，5期間安値・高値でエントリー，クローズする設定
     channelBreakOut = ChannelBreakOut()
-    channelBreakOut.entryTerm = 15
+    channelBreakOut.entryTerm = 20
     channelBreakOut.closeTerm = 12
     channelBreakOut.rangeTh = None
-    channelBreakOut.rangeTerm = 12 
-    channelBreakOut.waitTerm =5
+    channelBreakOut.rangeTerm = 5 
+    channelBreakOut.waitTerm = 30
     channelBreakOut.waitTh = 500
     channelBreakOut.candleTerm = "5T"
     channelBreakOut.cost = 0.01
-    channelBreakOut.risk = 0.1
+    channelBreakOut.risk = 0.3
     channelBreakOut.max_orders = 5
     channelBreakOut.margin = 4
 
