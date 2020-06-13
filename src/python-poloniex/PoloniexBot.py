@@ -9,7 +9,7 @@ from datetime import datetime, timedelta
 from time import gmtime, strftime
 import logging
 from decimal import *
-#
+###
 ###
 MIN_BTC_LOT = 0.01
 MIN_ALT_LOT = 0.001
@@ -207,21 +207,21 @@ global exp_jpy_rate
 #
 #####################
 #####
-# ƒƒO‚Ìo—Í–¼‚ğİ’èi1j
+# ãƒ­ã‚°ã®å‡ºåŠ›åã‚’è¨­å®šï¼ˆ1ï¼‰
 logger = logging.getLogger('PoloniexBot')
-# ƒƒOƒŒƒxƒ‹‚Ìİ’è
+# ãƒ­ã‚°ãƒ¬ãƒ™ãƒ«ã®è¨­å®š
 logger.setLevel(10)
-# ƒƒO‚Ìƒtƒ@ƒCƒ‹o—Íæ‚ğİ’è
+# ãƒ­ã‚°ã®ãƒ•ã‚¡ã‚¤ãƒ«å‡ºåŠ›å…ˆã‚’è¨­å®š
 fh = logging.FileHandler('PoloniexBot_Trace.log')
 logger.addHandler(fh)
-# ƒƒO‚Ìo—ÍŒ`®‚Ìİ’è
+# ãƒ­ã‚°ã®å‡ºåŠ›å½¢å¼ã®è¨­å®š
 formatter = logging.Formatter('%(asctime)s:%(lineno)d:%(levelname)s:%(message)s')
 fh.setFormatter(formatter)
 #####################
 #
 #####################
 #####
-#ƒ‰ƒCƒ“‚É‰Ò“­ó‹µ‚ğ’Ê’m
+#ãƒ©ã‚¤ãƒ³ã«ç¨¼åƒçŠ¶æ³ã‚’é€šçŸ¥
 line_notify_token = '******************************************'
 line_notify_api = 'https://notify-api.line.me/api/notify'
 #
