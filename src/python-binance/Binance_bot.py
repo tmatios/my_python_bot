@@ -18,7 +18,7 @@ import requests
 import sys
 #
 import pybitflyer
-######
+#####################
 #####################
 # ログの出力名を設定（1）
 logger = logging.getLogger('Binance_bot')
