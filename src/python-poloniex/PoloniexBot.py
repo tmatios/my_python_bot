@@ -10,7 +10,7 @@ from time import gmtime, strftime
 import logging
 from decimal import *
 ###
-###
+####
 MIN_BTC_LOT = 0.01
 MIN_ALT_LOT = 0.001
 MIN_USDC_LOT = 0.001
