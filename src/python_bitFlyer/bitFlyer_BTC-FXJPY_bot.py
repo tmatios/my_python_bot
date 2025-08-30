@@ -58,13 +58,13 @@ class ChannelBreakOut:
         self._risk = 0.3
         self._max_orders = 5 # Max=5
         self.order = Order()
-        self.api = pybitflyer.API('GSj5CHLLvHNwpZcwZnAjTj', 'JLP1drD5LkLgd4AbyKHy0rB3zJDZynwpcYS2FyIFFk0=')
+        self.api = pybitflyer.API('MySecretKey', 'MyPublicKey')
         self.bitflyer = ccxt.bitflyer()
-        self.bitflyer.apiKey = 'GSj5CHLLvHNwpZcwZnAjTj'
-        self.bitflyer.secret = 'JLP1drD5LkLgd4AbyKHy0rB3zJDZynwpcYS2FyIFFk0='
+        self.bitflyer.apiKey = 'MySecretKey''
+        self.bitflyer.secret = 'MyAPIKey'
 #
         #ラインに稼働状況を通知
-        self.line_notify_token = 'm5zT4mquJDVU2zK5GtqWOw0hBokC9hqPZQOI3xadDrx'
+        self.line_notify_token = 'MyNotfyKey'
         self.line_notify_api = 'https://notify-api.line.me/api/notify'
 
     @property
